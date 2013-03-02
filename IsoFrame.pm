@@ -157,7 +157,6 @@ sub new { #{{{1
 
     $log->debug("cube built");
 
-    my $action_button_szr = Wx::FlexGridSizer->new(0,2,0,0);
     $self->action_btn({});
     my @column_buttons = ();
     for my $action ( $AC_PAINT, $AC_SAMPLE, 'erase', 'select', $AC_SHADE) {
@@ -206,10 +205,11 @@ sub new { #{{{1
 
     $self->misc_btn({});
 
-    my $flood_btn = $self->misc_btn->{flood} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{flood_off});
-    $self->mode_btn->{$MO_FLOOD} = $flood_btn;
-    Wx::Event::EVT_BUTTON($self, $flood_btn, sub { $_[0]->change_mode($MO_FLOOD); });
-    push @column_buttons, $flood_btn;
+#    my $flood_btn = $self->misc_btn->{flood} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{flood_off});
+#    $self->mode_btn->{$MO_FLOOD} = $flood_btn;
+#    Wx::Event::EVT_BUTTON($self, $flood_btn, sub { $_[0]->change_mode($MO_FLOOD); });
+#    push @column_buttons, $flood_btn;
+    push @column_buttons, 0;
 
     my $undo_btn = $self->misc_btn->{undo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{undo}); 
     Wx::Event::EVT_LEFT_DOWN($undo_btn, sub { $self->start_undo_or_redo(0); $_[1]->Skip; });
@@ -223,19 +223,20 @@ sub new { #{{{1
     $redo_btn->SetToolTip(scalar @{ $scene->redo_stack } . " actions.");
     push @column_buttons, $redo_btn;
 
+    my $column_button_szr = Wx::FlexGridSizer->new(0,2,0,0);
     for my $button (@column_buttons) {
         if (ref $button) {
             $button->SetWindowStyleFlag(wxBU_EXACTFIT);
-            $action_button_szr->Add($button, 0, wxEXPAND);
+            $column_button_szr->Add($button, 0, wxEXPAND);
         }
         else {
 
             # spacer height
-            $action_button_szr->Add(0, $button);
+            $column_button_szr->Add(0, $button);
         }
     }
 
-    $tool_sizer->Add($action_button_szr, 0, wxEXPAND);
+    $tool_sizer->Add($column_button_szr, 0, wxEXPAND);
 
     my $menu_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
     $tool_sizer->Add($menu_btn, 0, wxEXPAND);
