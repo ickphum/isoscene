@@ -425,17 +425,17 @@ sub mouse_event_handler { #{{{1
                 $self->brush_index($palette_index);
             }
             elsif ($action =~ /select/) {
-                $log->info("lmb down select");
+                $log->debug("lmb down select");
 
                 # the state of the initially selected tile dictates whether this down-[move]-up
                 # sequence selects or deselects.
                 if (my $tile = $self->find_tile($grid_key)) {
                     $self->select_toggle(! $tile->{selected});
-                    $log->info("select start from tile: flag " . $self->select_toggle);
+                    $log->debug("select start from tile: flag " . $self->select_toggle);
                 }
                 else {
                     $self->select_toggle(1);
-                    $log->info("select start from no tile: flag " . $self->select_toggle);
+                    $log->debug("select start from no tile: flag " . $self->select_toggle);
                 }
             }
             elsif ($action eq $IsoFrame::AC_PASTE) {
@@ -471,7 +471,7 @@ sub mouse_event_handler { #{{{1
             }
 
             if ($action eq $IsoFrame::AC_PASTE) {
-                $log->info("do paste");
+                $log->debug("do paste");
                 $frame->action($IsoFrame::AC_PAINT);
                 $self->set_cursor;
                 $self->paste_list(undef);
@@ -490,7 +490,7 @@ sub mouse_event_handler { #{{{1
                 elsif ($action =~ /erase/) {
 
                     my @deleted_tiles = keys %{ $self->deleted_tile };
-                    $log->info("deleted_tiles @deleted_tiles");
+                    $log->debug("deleted_tiles @deleted_tiles");
                     $self->add_undo_action($IsoFrame::AC_ERASE, \@deleted_tiles);
                     for my $key (@deleted_tiles) {
                         delete $self->scene->grid->{$key};
@@ -501,7 +501,7 @@ sub mouse_event_handler { #{{{1
                 elsif ($action =~ /select/) {
 
                     my @selected_tiles = keys %{ $self->selected_tile };
-                    $log->info("selected_tiles @selected_tiles");
+                    $log->debug("selected_tiles @selected_tiles");
                     for my $key (@selected_tiles) {
                         $self->scene->grid->{$key}->{selected} = $self->select_toggle;
                         $refresh = 1;
@@ -568,7 +568,7 @@ sub mouse_event_handler { #{{{1
             }
             else {
                 if (my $tile = $self->find_tile($grid_key)) {
-                    $log->info("found tile " . Dumper($tile));
+                    $log->debug("found tile " . Dumper($tile));
 
                     if ($action eq $IsoFrame::AC_ERASE_ALL
                         || $tile->{shape} =~ /T[LR]/
@@ -634,7 +634,7 @@ sub mouse_event_handler { #{{{1
                 $refresh = $self->mark_area($self->selected_tile, $left, $top, $right, $facing, $paint_shape);
             }
             elsif (my $tile = $self->find_tile($grid_key)) {
-                $log->info("tile: " . Dumper($tile));
+                $log->debug("tile: " . Dumper($tile));
                 if ($action eq $IsoFrame::AC_SELECT_ALL
                     || $tile->{shape} =~ /T[LR]/
                     || ($action eq $IsoFrame::AC_SELECT && $tile->{shape} eq $paint_shape)
@@ -914,7 +914,7 @@ sub paint_tile { #{{{1
 sub clipboard_operation { #{{{1
     my ($self, $operation, $data) = @_;
 
-    $log->info("clipboard_operation: $operation");
+    $log->debug("clipboard_operation: $operation");
 
     if ($operation eq 'paste') {
 
@@ -1030,16 +1030,16 @@ sub clipboard_operation { #{{{1
         my $x_scale = $width / $clip_width;
         my $y_scale = $height / $clip_height;
         my $thumb_scale = min($x_scale, $y_scale);
-        $log->info("thumb_scale from $x_scale, $y_scale : $thumb_scale");
+        $log->debug("thumb_scale from $x_scale, $y_scale : $thumb_scale");
 
         # create a bitmap to hold the thumbed image
         my $thumb_bm = Wx::Bitmap->new($width, $height, 32);
-        $log->info("bitmap ok? : " . $thumb_bm->IsOk);
+        $log->debug("bitmap ok? : " . $thumb_bm->IsOk);
 
         # create a dc to draw the image into and link the bitmap to it
         my $thumb_dc = Wx::MemoryDC->new();
         $thumb_dc->SelectObject($thumb_bm);
-        $log->info("memory dc ok? : " . $thumb_dc->IsOk);
+        $log->debug("memory dc ok? : " . $thumb_dc->IsOk);
 
         $thumb_dc->SetUserScale($thumb_scale, $thumb_scale);
 
@@ -1524,7 +1524,7 @@ sub export_scene { #{{{1
         $min_y_grid = min($min_y_grid, $tile_y_grid);
         $max_y_grid = max($max_y_grid, $tile_y_grid);
     }
-    $log->info("grid key extents: $min_x_grid,$min_y_grid to $max_x_grid,$max_y_grid");
+    $log->debug("grid key extents: $min_x_grid,$min_y_grid to $max_x_grid,$max_y_grid");
 
     # add margin so it's consistent wrt number of empty grid rows/cols
     # around image
@@ -1547,23 +1547,23 @@ sub export_scene { #{{{1
     # create a bitmap for A4 600 dpi
     my ($width, $height) = (4800, 6600);
 
-    $log->info("top left $min_x,$min_y to bottom right $max_x,$max_y");
+    $log->debug("top left $min_x,$min_y to bottom right $max_x,$max_y");
 
     # find the scale factors for logical to device width, then use the smaller so we fit
     # both dimensions in.
     my $x_scale = $width / ($max_x - $min_x);
     my $y_scale = $height / ($max_y - $min_y);
     my $export_scale = min($x_scale, $y_scale);
-    $log->info("export_scale from $x_scale, $y_scale : $export_scale");
+    $log->debug("export_scale from $x_scale, $y_scale : $export_scale");
 
     # create a bitmap to hold the exported image
     my $export_bm = Wx::Bitmap->new($width, $height, 24);
-    $log->info("bitmap ok? : " . $export_bm->IsOk);
+    $log->debug("bitmap ok? : " . $export_bm->IsOk);
 
     # create a dc to draw the image into and link the bitmap to it
     my $export_dc = Wx::MemoryDC->new();
     $export_dc->SelectObject($export_bm);
-    $log->info("memory dc ok? : " . $export_dc->IsOk);
+    $log->debug("memory dc ok? : " . $export_dc->IsOk);
 
     $export_dc->SetUserScale($export_scale, $export_scale);
 
@@ -1583,7 +1583,7 @@ sub export_scene { #{{{1
     my $name = $self->scene->filename;
     $export_bm->SaveFile("$name.png", wxBITMAP_TYPE_PNG);
 
-    $log->info("export done");
+    $log->debug("export done");
     $self->SetCursor(wxCROSS_CURSOR);
 
     return;
