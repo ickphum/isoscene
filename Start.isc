@@ -1,0 +1,16 @@
+--- !!perl/hash:IsoScene
+background_rgb: '#AAAAAA'
+bg_line_rgb: '#B3B3B3'
+clipboard: []
+filename: Start
+grid: {}
+left_rgb: '#ca9c5b'
+origin_x: 0
+origin_y: 0
+palette: []
+redo_stack: []
+right_rgb: '#ac7e3d'
+scale: 0.25
+tile_line_rgb: '#DDDDDD'
+top_rgb: '#e8ba79'
+undo_stack: []
