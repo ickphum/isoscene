@@ -1669,7 +1669,7 @@ sub move_origin { #{{{1
 sub import_bitmap { #{{{1
     my ($self, $shape) = @_;
 
-    $log->info("import file " . $self->frame->import_file . " on side $shape at " . join(',', @{ $self->current_location }));
+    $log->debug("import file " . $self->frame->import_file . " on side $shape at " . join(',', @{ $self->current_location }));
 
     my $image = Wx::Image->new($self->frame->import_file, wxBITMAP_TYPE_ANY);
 
@@ -1687,12 +1687,40 @@ sub import_bitmap { #{{{1
 
     my ($width, $height) = ($image->GetWidth, $image->GetHeight);
     my @imported_tiles = ();
+
+    # sometimes small images have their alpha channel turned into a mask; this turns it back
+    $image->InitAlpha;
+
     my $has_alpha = $image->HasAlpha;
+
+    # express the way the coords change per image row and column for each
+    # side; this is the current side in the cube, nothing to do with the selected tile.
+    my @ltr_coords = ($left, $top, $right);
+    my $side_changes = {
+        $SH_LEFT => {
+            x_changes => [ 0, 1, 1 ],
+            y_changes => [ 1, -$width, -($width-1) ],
+        },
+        $SH_TOP => {
+            x_changes => [ 0, 1, 1 ],
+            y_changes => [ -1, -($width-1), -$width ],
+        },
+        $SH_RIGHT => {
+            x_changes => [ -1, 1, 0 ],
+            y_changes => [ $width+1, -$width, 1 ],
+        },
+    };
+    my $changes = $side_changes->{$shape};
 
     for my $y (0 .. $height - 1) {
         for my $x (0 .. $width - 1) {
-
-            my $image_y = $height - 1 - $y;
+    
+            # by virtue of how we anchoring the extended cursor displayed for import,
+            # the selected tile is at the bottom of the image for TOP imports so we 
+            # have to reverse the y sequence.
+            my $image_y = $shape eq $SH_TOP
+                ? $height - 1 - $y
+                : $y;
 
             # skip wholly transparent pixels; we aren't doing anything useful with
             # alpha values yet.
@@ -1703,24 +1731,19 @@ sub import_bitmap { #{{{1
                     $image->GetBlue($x,$image_y));
 
                 my $colour_str = sprintf("#%02X%02X%02X", $red, $green, $blue);
-                $log->info("x $x, y $image_y, $colour_str");
                 $self->brush_index($self->get_palette_index($colour_str));
-                $log->info("try to paint at $x,$y");
-                if (my $key = $self->paint_tile($left, $top, $right, $facing, $shape)) {
-                    $log->info("painted ok");
+                if (my $key = $self->paint_tile(@ltr_coords, $facing, $shape)) {
                     push @imported_tiles, $key;
                 }
             }
-            else {
-                $log->info("skip transparent tile at $x,$image_y");
-            }
 
-            $top++;
-            $right++;
+            foreach my $i (0 .. 2) {
+                $ltr_coords[$i] += $changes->{x_changes}->[$i];
+            }
         }
-        $left--;
-        $top -= $width - 1;
-        $right -= $width;
+        foreach my $i (0 .. 2) {
+            $ltr_coords[$i] += $changes->{y_changes}->[$i];
+        }
     }
 
     $self->add_undo_action($IsoFrame::AC_PAINT, \@imported_tiles);
