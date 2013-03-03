@@ -12,6 +12,7 @@ use Storable qw(dclone);
 use Log::Log4perl qw(get_logger);
 use File::Basename;
 use Wx::XRC;
+use Alien::wxWidgets;
 
 use IsoFrame;
 use IsoScene;
@@ -101,7 +102,12 @@ sub set_button_bitmap { #{{{1
     $log->logconfess("null button") unless defined $button;
     $log->logconfess("null bitmap") unless defined $bitmap;
 
-    $button->SetBitmap($bitmap);
+    if (Alien::wxWidgets->version > 2.9) {
+        $button->SetBitmap($bitmap);
+    }
+    else {
+        $button->SetBitmapLabel($bitmap);
+    }
 
     return $button;
 }
