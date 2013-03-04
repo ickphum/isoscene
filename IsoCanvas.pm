@@ -201,6 +201,8 @@ sub new { #{{{1
 
     my $self = $class->SUPER::new( $parent, $id, $pos, $size, 0);
 
+    $self->frame($parent);
+
     $self->scene($scene);
     my $app = wxTheApp;
 
@@ -223,8 +225,6 @@ sub new { #{{{1
 
     # add move as a pseudo-action as it has a separate cursor
     $self->action_cursor->{move} = Wx::Cursor->new($app->bitmap->{move_on}->ConvertToImage);
-
-    $self->frame($parent);
 
     $self->set_cursor;
     $self->cursor_multiplier_x(1);
@@ -283,6 +283,12 @@ sub scene { #{{{1
         $self->background_brush(Wx::Brush->new(Wx::Colour->new($scene->background_rgb), wxBRUSHSTYLE_SOLID));
         $self->bg_line_pen(Wx::Pen->new(Wx::Colour->new($scene->bg_line_rgb), 1, wxPENSTYLE_SOLID));
         $self->tile_line_pen(Wx::Pen->new(Wx::Colour->new($scene->tile_line_rgb), 1, wxPENSTYLE_SOLID));
+
+        $self->frame->cube_brush({
+            L => Wx::Brush->new(Wx::Colour->new($scene->left_rgb), wxBRUSHSTYLE_SOLID),
+            T => Wx::Brush->new(Wx::Colour->new($scene->top_rgb), wxBRUSHSTYLE_SOLID),
+            R => Wx::Brush->new(Wx::Colour->new($scene->right_rgb), wxBRUSHSTYLE_SOLID),
+        });
 
         $self->area_tiles([]);
         $self->deleted_tile({});
