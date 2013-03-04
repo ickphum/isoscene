@@ -210,7 +210,10 @@ sub new { #{{{1
     # erase actions and the 3 select actions could share cursors.
     $self->action_cursor({});
     for my $action (@IsoFrame::ACTIONS) {
-        next if $action eq $IsoFrame::AC_SHADE;
+
+        # skip the transitory colour change actions
+        next if $action =~ /\A(?:$IsoFrame::AC_SHADE|$IsoFrame::AC_LIGHTEN|$IsoFrame::AC_DARKEN)\z/;
+
         my $bitmap = $action =~ /erase/
             ? 'erase'
             : $action =~ /select/
@@ -1501,7 +1504,9 @@ sub draw_scene { #{{{1
 
 ################################################################################
 sub export_scene { #{{{1
-    my ($self) = @_;
+    my ($self, $size) = @_;
+
+    $log->info("export_scene: size $size");
 
     my $busy = Wx::BusyCursor->new;
     $self->SetCursor(wxHOURGLASS_CURSOR);
@@ -1551,9 +1556,11 @@ sub export_scene { #{{{1
     my $max_y = $max_y_grid * $self->y_grid_size;
 
     # create a bitmap for A4 600 dpi
-    my ($width, $height) = (4800, 6600);
+    my ($width, $height) = $size eq 'A4' 
+        ? (4800, 6600)
+        : (($max_x_grid - $min_x_grid) * $size, ($max_y_grid - $min_y_grid) * $size);
 
-    $log->debug("top left $min_x,$min_y to bottom right $max_x,$max_y");
+    $log->info("top left $min_x,$min_y to bottom right $max_x,$max_y");
 
     # find the scale factors for logical to device width, then use the smaller so we fit
     # both dimensions in.
@@ -1583,7 +1590,6 @@ sub export_scene { #{{{1
     $export_dc->Clear;
 
     $self->draw_scene($export_dc, 1);
-#    $self->draw_scene($export_dc, $min_x, $min_y, $max_x, $max_y, undef, undef, undef, undef, 1);
 
     # save the bitmap to file
     my $name = $self->scene->filename;

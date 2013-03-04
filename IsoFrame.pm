@@ -84,13 +84,15 @@ our @ACTIONS = our (
     $AC_ERASE,
     $AC_ERASE_OTHERS,
     $AC_ERASE_ALL,
+    $AC_LIGHTEN,
+    $AC_DARKEN,
     $AC_SHADE,
     $AC_IMPORT,
     $AC_PASTE,
     $AC_SELECT,
     $AC_SELECT_OTHERS,
     $AC_SELECT_ALL,
-    ) = qw(paint sample erase_current erase_others erase_all shade import paste select_current select_others select_all);
+    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade import paste select_current select_others select_all);
 
 ################################################################################
 # Constructor. Creates a Wx::Frame object, adds a sizer and a status bar and
@@ -159,7 +161,7 @@ sub new { #{{{1
 
     $self->action_btn({});
     my @column_buttons = ();
-    for my $action ( $AC_PAINT, $AC_SAMPLE, 'erase', 'select', $AC_SHADE) {
+    for my $action ( $AC_PAINT, $AC_SAMPLE, 'erase', 'select', $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE) {
 
         my $action_btn = $self->action_btn->{$action} = Wx::BitmapButton->new($tool_panel, -1,
             $action =~ /erase|select/
@@ -278,6 +280,8 @@ sub new { #{{{1
 sub change_action { #{{{1
     my ($self, $action) = @_;
 
+    $log->debug("change_action $action");
+
     # changing to another action during paste cancels the paste
     if ($self->action eq $AC_PASTE) {
         $self->canvas->paste_list(undef);
@@ -285,13 +289,12 @@ sub change_action { #{{{1
     }
 
     # changing to another action during import cancels the import
-    if ($self->action eq $AC_IMPORT) {
+    elsif ($self->action eq $AC_IMPORT) {
         $self->canvas->cursor_multiplier_x(1);
         $self->canvas->cursor_multiplier_y(1);
     }
 
-    $log->debug("change_action $action");
-    if ($action eq $AC_SHADE) {
+    elsif ($action eq $AC_SHADE) {
 
         # change the cube colors of the unselected sides
         my $side = $self->current_side;
@@ -310,8 +313,25 @@ sub change_action { #{{{1
         # revert to paint
         $action = $AC_PAINT;
     }
+    elsif ($action =~ /\A(?:$AC_LIGHTEN|$AC_DARKEN)\z/) {
 
-    # changing action during move mode cancels the move
+        # change the cube color of the selected side
+        my $side = $self->current_side;
+        my $brush = $self->cube_brush->{ $side };
+        my $colour = $brush->GetColour;
+        my @rgb = ($colour->Red, $colour->Green, $colour->Blue);
+        my $change = wxTheApp->config->shade_change;
+        $change = - $change if $action eq $AC_DARKEN;
+        my @new_rgb = map { List::Util::max(List::Util::min($_ + $change, 255), 0) } @rgb;
+        $self->cube_brush->{ $side }->SetColour(Wx::Colour->new(@new_rgb));
+        $self->update_scene_color($side);
+
+        # revert to paint
+        $action = $AC_PAINT;
+    }
+
+    # changing action during move mode cancels the move; we've probably forgotten move is on
+    # and are about to use the new action.
     if ($self->mode eq $MO_MOVE) {
 
         # this looks weird but is due to the mode buttons being toggles;
@@ -386,7 +406,17 @@ sub show_menu { #{{{1
             }
         }
         elsif ($string eq $export) {
-            $self->canvas->export_scene;
+            my @sizes = (
+                [ 1, '1 pixel per tile' ],
+                [ 2, '2 pixels per tile', ],
+                [ 5, '5 pixels per tile', ],
+                [ 10, '10 pixels per tile', ],
+                [ 20, '20 pixels per tile', ],
+                [ 'A4', 'A4 @ 600 dpi' ],
+            );
+            if (defined (my $index = Wx::GetSingleChoiceIndex( 'Export Size', 'IsoScene', [ map { $_->[1] } @sizes ] , $self ))) {
+                $self->canvas->export_scene($sizes[$index]->[0]);
+            }
         }
         elsif ($string eq $import) {
             my $dialog = Wx::FileDialog->new( $self,
@@ -652,11 +682,12 @@ sub cube_paint_event { #{{{1
         $SI_TOP => [ -15, -44 ],
         $SI_RIGHT => [ 10, -3 ],
     );
-    my @sides = $frame->action =~ /\A(?:paint|erase_current|sample|shade|import|select_current)\z/
-        ? ($frame->current_side)
-        : $frame->action =~ /_all|paste/
+#    my @sides = $frame->action =~ /\A(?:paint|erase_current|sample|lighten|darken|shade|import|select_current)\z/
+    my @sides = $action =~ /_all|paste/
             ? ($SI_LEFT, $SI_TOP, $SI_RIGHT)
-            : grep { $_ ne $frame->current_side } ($SI_LEFT, $SI_TOP, $SI_RIGHT);
+            : $action =~ /_others\z/
+                ? grep { $_ ne $frame->current_side } ($SI_LEFT, $SI_TOP, $SI_RIGHT)
+                : ($frame->current_side);
     for my $side (@sides) {
         my $brush_offset = $side_offset{ $side };
         $dc->DrawBitmap($side_bitmap, $w2 + $brush_offset->[0], $h2 + $brush_offset->[1], 1);
@@ -683,7 +714,7 @@ sub current_side { #{{{1
         $self->mode_btn->{$MO_AREA}->Refresh;
 
         # switch the images on the action buttons
-        for my $action (qw(paint sample shade)) {
+        for my $action ($AC_PAINT, $AC_SAMPLE, $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE) {
             IsoApp::set_button_bitmap($self->action_btn->{$action}, $bitmap->{"action_${action}_$side"});
             $self->action_btn->{$action}->Refresh;
         }
