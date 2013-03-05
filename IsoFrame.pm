@@ -21,6 +21,7 @@ use English qw(-no_match_vars);
 
 use IsoCanvas;
 use IsoPasteSelector;
+use IsoExportOptions;
 
 # attributes {{{1
 
@@ -406,17 +407,24 @@ sub show_menu { #{{{1
             }
         }
         elsif ($string eq $export) {
-            my @sizes = (
-                [ 1, '1 pixel per tile' ],
-                [ 2, '2 pixels per tile', ],
-                [ 5, '5 pixels per tile', ],
-                [ 10, '10 pixels per tile', ],
-                [ 20, '20 pixels per tile', ],
-                [ 'A4', 'A4 @ 600 dpi' ],
-            );
-            if (defined (my $index = Wx::GetSingleChoiceIndex( 'Export Size', 'IsoScene', [ map { $_->[1] } @sizes ] , $self ))) {
-                $self->canvas->export_scene($sizes[$index]->[0]);
-            }
+
+                $log->info("create IsoExportOptions");
+                my $dialog = IsoExportOptions->new($self);
+                $log->info("show IsoExportOptions");
+                if ($dialog->ShowModal == wxID_OK) {
+                    $log->info("ok");
+                }
+#            my @sizes = (
+#                [ 1, '1 pixel per tile' ],
+#                [ 2, '2 pixels per tile', ],
+#                [ 5, '5 pixels per tile', ],
+#                [ 10, '10 pixels per tile', ],
+#                [ 20, '20 pixels per tile', ],
+#                [ 'A4', 'A4 @ 600 dpi' ],
+#            );
+#            if (defined (my $index = Wx::GetSingleChoiceIndex( 'Export Size', 'IsoScene', [ map { $_->[1] } @sizes ] , $self ))) {
+#                $self->canvas->export_scene($sizes[$index]->[0]);
+#            }
         }
         elsif ($string eq $import) {
             my $dialog = Wx::FileDialog->new( $self,

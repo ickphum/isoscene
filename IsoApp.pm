@@ -22,13 +22,13 @@ my $log = get_logger;
 
 __PACKAGE__->mk_accessors( qw(bitmap scene config autosave_timer frame xrc) );
 
-sub new { # {{{2
+sub new { # {{{1
     my( $class, $option ) = @_;
     my $self = $class->SUPER::new();
 
     $self->{xrc} = Wx::XmlResource->new();
     $self->xrc->InitAllHandlers;
-    # $self->xrc->Load('paste_selector.xrc');
+    $self->xrc->Load('export_options.xrc');
 
     my @images = qw(cube menu paint sample import erase undo redo
         select tick_L tick_T tick_R tick_TL tick_TR
@@ -110,6 +110,39 @@ sub set_button_bitmap { #{{{1
     }
 
     return $button;
+}
+
+################################################################################
+sub save_dialog_settings { #{{{2
+    my ($self, $setting_group, $dialog_control) = @_;
+
+    my $scene = $self->scene;
+
+    $scene->$setting_group({});
+    my $setting = $scene->$setting_group;
+
+    for my $control_name (keys %{ $dialog_control } ) {
+        next unless $control_name =~ /_(?:rbn|chb|txt|sld)\z/;
+        $setting->{ $control_name } = $dialog_control->{ $control_name }->GetValue;
+    }
+
+    return;
+}
+
+################################################################################
+sub load_dialog_settings { #{{{2
+    my ($self, $setting_group, $dialog_control) = @_;
+
+    my $scene = $self->scene;
+
+    my $setting = $scene->$setting_group;
+
+    for my $control_name (keys %{ $dialog_control } ) {
+        next unless $control_name =~ /_(?:rbn|chb|txt|sld)\z/;
+        $dialog_control->{ $control_name }->SetValue($setting->{ $control_name });
+    }
+
+    return;
 }
 
 ################################################################################

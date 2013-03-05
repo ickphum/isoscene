@@ -1586,14 +1586,19 @@ sub export_scene { #{{{1
     $export_dc->SetDeviceOrigin($device_origin_x, $device_origin_y);
 
     # draw the scene into the memory dc
-    $export_dc->SetBackground(wxWHITE_BRUSH);
+    $export_dc->SetBackground(wxTRANSPARENT_BRUSH);
     $export_dc->Clear;
 
     $self->draw_scene($export_dc, 1);
 
-    # save the bitmap to file
+    # convert to an image for alpha channel addition
+    my $export_image = $export_bm->ConvertToImage;
+    $export_image->SetMask(1);
+    $export_image->InitAlpha();
+
+    # save the image to file
     my $name = $self->scene->filename;
-    $export_bm->SaveFile("$name.png", wxBITMAP_TYPE_PNG);
+    $export_image->SaveFile("$name.png", wxBITMAP_TYPE_PNG);
 
     $log->debug("export done");
     $self->SetCursor(wxCROSS_CURSOR);

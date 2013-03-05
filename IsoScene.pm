@@ -27,6 +27,7 @@ __PACKAGE__->mk_accessors( qw(
     redo_stack
     filename
     clipboard
+    export_options
 ));
 
 ################################################################################
