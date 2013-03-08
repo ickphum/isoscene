@@ -8,7 +8,7 @@ default_scene_right_rgb: '#ac7e3d'
 default_scene_scale: 0.25
 default_scene_tile_line_rgb: '#DDDDDD'
 default_scene_top_rgb: '#e8ba79'
-previous_scene_file: Start
+previous_scene_file: Bridge
 relative_shades: L,1,T,0,R,2
 shade_change: '30'
 undo_repeat_milliseconds: '20'

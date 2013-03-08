@@ -1276,7 +1276,7 @@ sub repaint_canvas { #{{{1
 
 ################################################################################
 sub draw_scene { #{{{1
-    my ($self, $dc, $no_bg_lines) = @_;
+    my ($self, $dc, %param) = @_;
 
     my $frame = $self->frame;
     my $current_brush = 0;
@@ -1311,7 +1311,12 @@ sub draw_scene { #{{{1
 
 #    return;
 
-    $dc->SetPen($self->tile_line_pen);
+    if ($param{tb_transparent_rbn}) {
+        $dc->SetPen(wxTRANSPARENT_PEN);
+    }
+    elsif ($param{tb_normal_rbn}) {
+        $dc->SetPen($self->tile_line_pen);
+    }
 
     my $palette = $self->palette;
 
@@ -1374,6 +1379,10 @@ sub draw_scene { #{{{1
 
             $dc->SetBrush($palette->[ $tile->{brush_index} ]);
 
+            if ($param{tb_matching_tile_rbn}) {
+                $dc->SetPen(Wx::Pen->new($dc->GetBrush->GetColour,1,wxPENSTYLE_SOLID));
+            }
+
             my $shape = $Tile_shape->{ $tile->{shape} }
                 or $log->logdie("bad tile shape $tile->{shape}");
 
@@ -1404,8 +1413,8 @@ sub draw_scene { #{{{1
         $self->tile_cache(\@new_cache);
     }
 
-    # draw current location
-    if (my $current_location = $self->current_location) {
+    # draw current location unless we're exporting; just check for any key from export_options
+    if ((my $current_location = $self->current_location) && ! defined $param{a4_rbn}) {
         my ($left, $top, $right, $facing) = @{ $current_location };
 
         # here, we can equate side with shape
@@ -1504,9 +1513,9 @@ sub draw_scene { #{{{1
 
 ################################################################################
 sub export_scene { #{{{1
-    my ($self, $size) = @_;
+    my ($self) = @_;
 
-    $log->info("export_scene: size $size");
+    $log->info("export_scene");
 
     my $busy = Wx::BusyCursor->new;
     $self->SetCursor(wxHOURGLASS_CURSOR);
@@ -1555,12 +1564,34 @@ sub export_scene { #{{{1
     my $min_y = $min_y_grid * $self->y_grid_size;
     my $max_y = $max_y_grid * $self->y_grid_size;
 
-    # create a bitmap for A4 600 dpi
-    my ($width, $height) = $size eq 'A4' 
-        ? (4800, 6600)
-        : (($max_x_grid - $min_x_grid) * $size, ($max_y_grid - $min_y_grid) * $size);
+    my $export_option = $self->scene->export_options;
 
-    $log->info("top left $min_x,$min_y to bottom right $max_x,$max_y");
+    # find bitmap size
+    my ($width, $height); 
+    if ($export_option->{pixels_per_tile_rbn}) {
+        my $pixels_per_tile = $export_option->{pixels_per_tile_sld};
+        ($width, $height) = (($max_x_grid - $min_x_grid) * $pixels_per_tile, ($max_y_grid - $min_y_grid) * $pixels_per_tile);
+    }
+    else {
+
+        # doc sizes in inches, in portrait
+        my $sheet_size_inches = {
+            a3_rbn => [ 11.69, 16.54 ],
+            a4_rbn => [ 8.27, 11.69 ],
+            a5_rbn => [ 5.83, 8.27 ],
+        };
+
+        my ($selected_sheet_rbn) = grep { $export_option->{$_} } qw(a3_rbn a4_rbn a5_rbn);
+
+        my @dims = @{ $sheet_size_inches->{ $selected_sheet_rbn } };
+        @dims = reverse @dims if $export_option->{landscape_chb};
+
+        my $dpi = $export_option->{dpi_600_rbn} ? 600 : 300;
+
+        ($width, $height) = (int($dims[0] * $dpi), int($dims[1] * $dpi));
+    }
+
+    $log->info("top left $min_x,$min_y to bottom right $max_x,$max_y, bitmap dims $width x $height");
 
     # find the scale factors for logical to device width, then use the smaller so we fit
     # both dimensions in.
@@ -1589,7 +1620,7 @@ sub export_scene { #{{{1
     $export_dc->SetBackground(wxTRANSPARENT_BRUSH);
     $export_dc->Clear;
 
-    $self->draw_scene($export_dc, 1);
+    $self->draw_scene($export_dc, %{ $export_option });
 
     # convert to an image for alpha channel addition
     my $export_image = $export_bm->ConvertToImage;
@@ -1598,7 +1629,10 @@ sub export_scene { #{{{1
 
     # save the image to file
     my $name = $self->scene->filename;
-    $export_image->SaveFile("$name.png", wxBITMAP_TYPE_PNG);
+    my ($extension, $type) = $export_option->{jpeg_rbn}
+        ? ('jpg', wxBITMAP_TYPE_JPEG)
+        : ('png', wxBITMAP_TYPE_PNG);
+    $export_image->SaveFile("$name.$extension", $type);
 
     $log->debug("export done");
     $self->SetCursor(wxCROSS_CURSOR);

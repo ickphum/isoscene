@@ -407,24 +407,11 @@ sub show_menu { #{{{1
             }
         }
         elsif ($string eq $export) {
-
-                $log->info("create IsoExportOptions");
-                my $dialog = IsoExportOptions->new($self);
-                $log->info("show IsoExportOptions");
-                if ($dialog->ShowModal == wxID_OK) {
-                    $log->info("ok");
-                }
-#            my @sizes = (
-#                [ 1, '1 pixel per tile' ],
-#                [ 2, '2 pixels per tile', ],
-#                [ 5, '5 pixels per tile', ],
-#                [ 10, '10 pixels per tile', ],
-#                [ 20, '20 pixels per tile', ],
-#                [ 'A4', 'A4 @ 600 dpi' ],
-#            );
-#            if (defined (my $index = Wx::GetSingleChoiceIndex( 'Export Size', 'IsoScene', [ map { $_->[1] } @sizes ] , $self ))) {
-#                $self->canvas->export_scene($sizes[$index]->[0]);
-#            }
+            my $dialog = IsoExportOptions->new($self);
+            if ($dialog->ShowModal == wxID_OK) {
+                $log->info("ok");
+                $self->canvas->export_scene;
+            }
         }
         elsif ($string eq $import) {
             my $dialog = Wx::FileDialog->new( $self,
