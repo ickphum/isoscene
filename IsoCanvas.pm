@@ -221,8 +221,8 @@ sub new { #{{{1
                 : $action;
         $log->logdie("no bitmap for $bitmap") unless $app->bitmap->{$bitmap};
         my $cursor_image = $app->bitmap->{$bitmap}->ConvertToImage;
-        $cursor_image->SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, $cursor_image->GetWidth / 2);
-        $cursor_image->SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, $cursor_image->GetHeight / 2);
+        $cursor_image->SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_X, 0);
+        $cursor_image->SetOption(wxIMAGE_OPTION_CUR_HOTSPOT_Y, $cursor_image->GetHeight - 1);
         $self->action_cursor->{$action} = Wx::Cursor->new($cursor_image);
     }
 

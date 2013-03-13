@@ -168,6 +168,7 @@ sub new { #{{{1
             $action =~ /erase|select/
             ? $bitmap->{"action_${action}_current_R"}
             : $bitmap->{"action_${action}_R"});
+        $action_btn->SetToolTip(ucfirst $action);
         if ($action =~ /erase|select/) {
             Wx::Event::EVT_LEFT_DOWN($action_btn, sub { $self->slow_button_down($_[1], $action); });
             Wx::Event::EVT_LEFT_UP($action_btn, sub { $self->slow_button_up($_[1], $action); });
@@ -183,19 +184,22 @@ sub new { #{{{1
     $self->mode_btn({});
 
     my $move_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{move_off});
+    $move_btn->SetToolTip("Pan");
     $self->mode_btn->{$MO_MOVE} = $move_btn;
     Wx::Event::EVT_BUTTON($self, $move_btn, sub { $_[0]->change_mode($MO_MOVE); });
     push @column_buttons, $move_btn;
 
     my $area_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{area_R_off});
+    $area_btn->SetToolTip("Use Area");
     $self->mode_btn->{$MO_AREA} = $area_btn;
     Wx::Event::EVT_BUTTON($self, $area_btn, sub { $_[0]->change_mode($MO_AREA); });
     push @column_buttons, $area_btn;
 
     # clipboard operations
     $self->clipboard_btn({});
-    for my $operation (qw(copy cut paste)) {
+    for my $operation (qw(copy cut paste selection_tools)) {
         my $button = $self->clipboard_btn->{$operation} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{$operation} );
+        $button->SetToolTip( join(' ', map { ucfirst $_ } split(/_/, $operation)) );
         if ($operation eq 'paste') {
             Wx::Event::EVT_LEFT_DOWN($button, sub { $self->slow_button_down($_[1], $operation); });
             Wx::Event::EVT_LEFT_UP($button, sub { $self->slow_button_up($_[1], $operation); });
@@ -212,15 +216,17 @@ sub new { #{{{1
 #    $self->mode_btn->{$MO_FLOOD} = $flood_btn;
 #    Wx::Event::EVT_BUTTON($self, $flood_btn, sub { $_[0]->change_mode($MO_FLOOD); });
 #    push @column_buttons, $flood_btn;
-    push @column_buttons, 0;
+#    push @column_buttons, 0;
 
     my $undo_btn = $self->misc_btn->{undo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{undo}); 
+    $undo_btn->SetToolTip("Undo");
     Wx::Event::EVT_LEFT_DOWN($undo_btn, sub { $self->start_undo_or_redo(0); $_[1]->Skip; });
     Wx::Event::EVT_LEFT_UP($undo_btn, sub { $self->undo_timer->Stop; $_[1]->Skip; });
     $undo_btn->SetToolTip(scalar @{ $scene->undo_stack } . " actions.");
     push @column_buttons, $undo_btn;
 
     my $redo_btn = $self->misc_btn->{redo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{redo}); 
+    $redo_btn->SetToolTip("Redo");
     Wx::Event::EVT_LEFT_DOWN($redo_btn, sub { $self->start_undo_or_redo(1); $_[1]->Skip; });
     Wx::Event::EVT_LEFT_UP($redo_btn, sub { $self->undo_timer->Stop; $_[1]->Skip; });
     $redo_btn->SetToolTip(scalar @{ $scene->redo_stack } . " actions.");
@@ -242,6 +248,7 @@ sub new { #{{{1
     $tool_sizer->Add($column_button_szr, 0, wxEXPAND);
 
     my $menu_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
+    $menu_btn->SetToolTip("Menu");
     $tool_sizer->Add($menu_btn, 0, wxEXPAND);
     Wx::Event::EVT_BUTTON($self, $menu_btn, sub { $_[0]->show_menu; });
 
@@ -950,7 +957,6 @@ sub set_action_mode { #{{{1
             elsif ($action eq 'select') {
                 $self->select_mode($action_mode);
             }
-
 
             IsoApp::set_button_bitmap($self->action_btn->{$action}, $bitmap->{$bitmap_name} );
             $self->change_action($action_name);
