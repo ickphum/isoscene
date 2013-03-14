@@ -1807,11 +1807,23 @@ sub import_bitmap { #{{{1
 }
 
 ################################################################################
-sub clear_selections { #{{{1
-    my ($self) = @_;
+sub set_selection_for_all { #{{{1
+    my ($self, $flag) = @_;
 
     for my $tile (values %{ $self->scene->grid }) {
-        $tile->{selected} = 0;
+        $tile->{selected} = $flag;
+    }
+    $self->Refresh;
+
+    return;
+}
+
+################################################################################
+sub select_visible { #{{{1
+    my ($self) = @_;
+
+    for my $key (@{ $self->tile_cache }) {
+        $self->scene->grid->{$key}->{selected} = 1;
     }
     $self->Refresh;
 

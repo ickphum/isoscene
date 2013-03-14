@@ -197,9 +197,9 @@ sub new { #{{{1
 
     # clipboard operations
     $self->clipboard_btn({});
-    for my $operation (qw(copy cut paste selection_tools)) {
+    for my $operation (qw(copy cut paste)) {
         my $button = $self->clipboard_btn->{$operation} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{$operation} );
-        $button->SetToolTip( join(' ', map { ucfirst $_ } split(/_/, $operation)) );
+        $button->SetToolTip( ucfirst $operation );
         if ($operation eq 'paste') {
             Wx::Event::EVT_LEFT_DOWN($button, sub { $self->slow_button_down($_[1], $operation); });
             Wx::Event::EVT_LEFT_UP($button, sub { $self->slow_button_up($_[1], $operation); });
@@ -217,6 +217,11 @@ sub new { #{{{1
 #    Wx::Event::EVT_BUTTON($self, $flood_btn, sub { $_[0]->change_mode($MO_FLOOD); });
 #    push @column_buttons, $flood_btn;
 #    push @column_buttons, 0;
+
+    my $button = $self->misc_btn->{selection_tools} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{selection_tools} );
+    $button->SetToolTip("Selection Tools");
+    Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(select_all select_none select_visible) ], \&do_selection_tool, $button->GetScreenPosition); });
+    push @column_buttons, $button;
 
     my $undo_btn = $self->misc_btn->{undo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{undo}); 
     $undo_btn->SetToolTip("Undo");
@@ -276,6 +281,8 @@ sub new { #{{{1
         T => Wx::Brush->new(Wx::Colour->new($scene->top_rgb), wxBRUSHSTYLE_SOLID),
         R => Wx::Brush->new(Wx::Colour->new($scene->right_rgb), wxBRUSHSTYLE_SOLID),
     });
+
+    $self->SetIcon(Wx::Icon->new("images/icon.png", wxBITMAP_TYPE_PNG));
 
     $log->debug("frame $self");
 
@@ -924,6 +931,61 @@ sub slow_button_timer_expired { #{{{1
 }
 
 ################################################################################
+sub show_button_popup { #{{{1
+    my ($self, $button_image_names, $callback, $position) = @_;
+
+    my $popup = Wx::PlPopupTransientWindow->new($self);
+
+    $popup->SetSizer(my $sizer = Wx::BoxSizer->new(wxHORIZONTAL));
+
+    my $current_side = $self->current_side;
+    my $bitmap = wxTheApp->bitmap;
+
+    for my $image_name (@{ $button_image_names }) {
+        my $button = Wx::BitmapButton->new($popup, -1, $bitmap->{$image_name});
+        $button->SetToolTip( join(' ', map { ucfirst $_ } split(/_/, $image_name)) );
+        $button->SetName($image_name);
+        $sizer->Add($button);
+
+        Wx::Event::EVT_BUTTON($popup, $button, $callback);
+    }
+
+    my $width = 52 * scalar @{ $button_image_names };
+
+    $popup->SetSize($width, 53);
+    $sizer->Layout;
+    $popup->Move($position);
+    $popup->Popup;
+
+    return;
+}
+
+################################################################################
+sub do_selection_tool { #{{{1
+    my ($popup, $event) = @_;
+
+    my $frame = $popup->GetParent;
+
+    $popup->Hide;
+    $popup->Close;
+
+    my $button_name = $event->GetEventObject->GetName;
+    $log->info("do_selection_tool: $button_name");
+
+    if ($button_name eq 'select_none') {
+        $frame->canvas->set_selection_for_all(0);
+    }
+    elsif ($button_name eq 'select_all') {
+        $frame->canvas->set_selection_for_all(1);
+    }
+    elsif ($button_name eq 'select_visible') {
+        $frame->canvas->select_visible;
+    }
+
+    return;
+}
+
+################################################################################
 sub set_action_mode { #{{{1
     my ($self, $action) = @_;
 
@@ -966,25 +1028,7 @@ sub set_action_mode { #{{{1
         });
     }
 
-    my $width = 156;
-
-    # add a clear-all button to the select popup
-    if ($action eq 'select') {
-        my $button = Wx::BitmapButton->new($popup, -1, $bitmap->{small_cube});
-        $sizer->Add($button);
-        $width += 50;
-
-        Wx::Event::EVT_BUTTON($popup, $button, sub { 
-            my ($popup, $event) = @_;
-
-            $popup->Hide;
-            $popup->Close;
-
-            $self->canvas->clear_selections;
-        });
-    }
-
-    $popup->SetSize($width, 53);
+    $popup->SetSize(156, 53);
     $sizer->Layout;
     my $button = $self->action_btn->{$action};
     $popup->Move($button->GetScreenPosition());

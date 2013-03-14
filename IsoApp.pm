@@ -32,7 +32,8 @@ sub new { # {{{1
 
     my @images = qw(cube menu paint sample import erase undo redo
         select tick_L tick_T tick_R tick_TL tick_TR
-        copy cut paste selection_tools small_paste small_cube);
+        copy cut paste selection_tools select_all select_none select_visible
+        small_paste small_cube);
     for my $image_name (qw(move area_L area_T area_R flood)) {
         push @images, "${image_name}_on", "${image_name}_off";
     }
