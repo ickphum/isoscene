@@ -64,7 +64,7 @@ sub new { # {{{2
 
                     # data for the current branch is an action; turn this into a list of actions.
                     my $current_branch = $new_branch_node->{current_branch};
-                    $new_branch_node->{branches}->[ $current_branch ] = [ $new_branch_node->{branches}->[$current_branch], @{ $self->{redo_stack} } ];
+                    $new_branch_node->{branches}->[ $current_branch ] = [ @{ $self->{redo_stack} }, $new_branch_node->{branches}->[$current_branch],  ];
 
                     # add the new branch (containing the new undo action) and make it current
                     push @{ $new_branch_node->{branches} }, $undo_action;
@@ -77,56 +77,98 @@ sub new { # {{{2
                     push @{ $self->{undo_stack} }, $undo_action;
                     $log->info("do new action $self->{action_number}");
                 }
+                push @{ $self->{actions} }, $self->{action_number};
                 $self->{action_number}++;
             }
             elsif ($label eq 'undo') {
 
                 if (@{ $self->{undo_stack} }) {
                     my $action = pop @{ $self->{undo_stack} };
+                    my $action_number;
                     if ( (ref $action) eq 'HASH' ) {
                         $log->info("undo branch action");
+                        $action_number = $action->{branches}->[ $action->{current_branch} ]->[ 0 ];
                     }
                     else {
                         $log->info("undo action $action->[0]");
+                        $action_number = $action->[0];
                     }
                     push @{ $self->{redo_stack} }, $action;
+                    my $top_action = pop @{ $self->{actions} };
+                    if ($top_action != $action_number) {
+                        $log->warn("top action $top_action didn't match undo action $action_number");
+                    }
                 }
                 else {
                     $log->warn("can't undo any more");
                 }
             }
-            elsif ($label eq 'redo') {
+            elsif ($label =~ /redo/) {
 
                 if (@{ $self->{redo_stack} }) {
+
                     my $action = pop @{ $self->{redo_stack} };
+
+                    if ($label =~ /redo-branch-(\d+)/) {
+                        my $new_branch = $1;
+                        if ( (ref $action) eq 'HASH' ) {
+                            if ($new_branch <= $#{ $action->{branches} }) {
+
+                                my $current_branch = $action->{current_branch};
+
+                                # turn current redo list (one item in this node plus redo stack) into a list
+                                $action->{branches}->[ $current_branch ] = [ @{ $self->{redo_stack} }, $action->{branches}->[$current_branch], ];
+
+                                # set redo stack to the new branch
+                                $self->{redo_stack} = $action->{branches}->[ $new_branch ];
+
+                                # pop redo stack into the node's branch list entry for the new branch
+                                $action->{branches}->[ $new_branch ] = pop @{ $self->{redo_stack} };
+
+                                # set current branch to new branch
+                                $action->{current_branch} = $new_branch;
+                            }
+                            else {
+                                $log->warn("tried to redo branch $new_branch and this branch node doesn't have that many branches");
+                            }
+                        }
+                        else {
+                            $log->warn("tried to redo branch $new_branch on a normal node");
+                        }
+                    }
+
+                    # should be able to do a normal redo now
+                    my $action_number;
                     if ( (ref $action) eq 'HASH' ) {
+
+                        # redo the existing current branch for this branch node
                         $log->info("redo branch action");
+                        $action_number = $action->{branches}->[ $action->{current_branch} ]->[ 0 ];
                     }
                     else {
                         $log->info("redo action $action->[0]");
+                        $action_number = $action->[0];
                     }
                     push @{ $self->{undo_stack} }, $action;
+                    push @{ $self->{actions} }, $action_number;
                 }
                 else {
                     $log->warn("can't redo any more");
                 }
             }
 
-            $log->info("undo, redo: " . Dumper($self->{undo_stack}, $self->{redo_stack}));
-
-            $log->info("undo stack:");
+            $log->info("undo stack: " . Dumper($self->{undo_stack}));
             for my $node ( @{ $self->{undo_stack} }) {
                 $self->display_node($node, 0);
             }
 
-            $log->info("redo stack:");
+            $log->info("redo stack: " . Dumper($self->{redo_stack}));
             for my $node ( @{ $self->{redo_stack} }) {
                 $self->display_node($node, 0);
             }
 
-#            my $stack_str = "button $label\nundo: " .  join(' ', map { $_->[0] } @{ $self->{undo_stack} }) . "\n";
-#            $stack_str .= 'redo: ' . join(' ', map { $_->[0] } @{ $self->{redo_stack} }) . "\n";
-#            $self->{label}->SetLabel($stack_str);
+            my $stack_str .= 'actions ' . join(' ', @{ $self->{actions} }) . "\n";
+            $self->{label}->SetLabel($stack_str);
 
         });
 
@@ -138,6 +180,7 @@ sub new { # {{{2
 
     $self->{undo_stack} = [];
     $self->{redo_stack} = [];
+    $self->{actions} = [];
     $self->{action_number} = 1;
 
     $self->SetSizer($self->{v_sizer});

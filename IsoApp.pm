@@ -30,7 +30,7 @@ sub new { # {{{1
     $self->xrc->InitAllHandlers;
     $self->xrc->Load('export_options.xrc');
 
-    my @images = qw(cube menu paint sample import erase undo redo
+    my @images = qw(cube menu paint sample import erase undo redo branch_redo
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
         small_paste small_cube);
@@ -98,10 +98,12 @@ sub set_frame_title { #{{{2
 
 ################################################################################
 sub set_button_bitmap { #{{{1
-    my ($button, $bitmap) = @_;
+    my ($button, $bitmap_name) = @_;
 
     $log->logconfess("null button") unless defined $button;
-    $log->logconfess("null bitmap") unless defined $bitmap;
+    $log->logconfess("null bitmap_name") unless defined $bitmap_name;
+    my $bitmap = wxTheApp->bitmap->{$bitmap_name}
+        or $log->logconfess("bitmap $bitmap_name not loaded");
 
     if (Alien::wxWidgets->version > 2.9) {
         $button->SetBitmap($bitmap);

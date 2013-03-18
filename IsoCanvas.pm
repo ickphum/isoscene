@@ -1651,11 +1651,44 @@ sub add_undo_action { #{{{1
         : $data
     ];
 
-    push @{ $self->scene->undo_stack }, [ $action, $undo_data ];
-#    $log->debug("undo stack now : " . Dumper($self->scene->undo_stack));
+    my $new_action = [ $action, $undo_data ];
 
-    # any new undo-able action clears the redo stack (until we implement forking undo)
-    $self->scene->redo_stack([]);
+    # Are there any items on the redo stack?
+    if (my $new_branch_node = pop @{ $self->scene->redo_stack }) {
+
+        $log->info("create branch then add new action");
+        
+        # the thing called new_branch_node may already be a branch node, or it may be a simple action.
+        # If the latter, make it into a branch node first, then we can add the new action generically.
+        if ((ref $new_branch_node) ne 'HASH') {
+
+            # turn this simple item into a branch item pointing to the top item from the redo stack, 
+            # then we can add the new branch.
+            $new_branch_node = {
+                branches => [ $new_branch_node, ],
+                current_branch => 0,
+            };
+        }
+
+        # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
+        # from the branch node.
+        my $current_branch = $new_branch_node->{current_branch};
+        $new_branch_node->{branches}->[ $current_branch ] = [ @{ $self->scene->redo_stack }, $new_branch_node->{branches}->[$current_branch],  ];
+
+        # add the new branch (containing the new undo action) and make it current
+        push @{ $new_branch_node->{branches} }, $new_action;
+        $new_branch_node->{current_branch} = $#{ $new_branch_node->{branches} };
+
+        push @{ $self->scene->undo_stack }, $new_branch_node;
+
+        # clear the redo stack now we've saved it to the branch
+        $self->scene->redo_stack([]);
+
+        $log->info("new_branch_node: " . Dumper($new_branch_node, $self->scene->undo_stack));
+    }
+    else {
+        push @{ $self->scene->undo_stack }, $new_action;
+    }
 
     return;
 }
@@ -1672,33 +1705,51 @@ sub undo_or_redo { #{{{1
     # undo and redo are conceptually the same; they take an action off a stack, either paint it or erase it 
     # depending on the action type and then put it on another stack. They only differ in the choice of stack
     # and action.
-    my ($source_stack, $target_stack, $erase_action, $paint_action, $source_button, $target_button) = $redo
-        ? ($self->scene->redo_stack, $self->scene->undo_stack, $IsoFrame::AC_ERASE, $IsoFrame::AC_PAINT, 'redo', 'undo')  
-        : ($self->scene->undo_stack, $self->scene->redo_stack, $IsoFrame::AC_PAINT, $IsoFrame::AC_ERASE, 'undo', 'redo');
+    my ($source_stack, $target_stack, $erase_action, $paint_action) = $redo
+        ? ($self->scene->redo_stack, $self->scene->undo_stack, $IsoFrame::AC_ERASE, $IsoFrame::AC_PAINT)  
+        : ($self->scene->undo_stack, $self->scene->redo_stack, $IsoFrame::AC_PAINT, $IsoFrame::AC_ERASE);
 
-    if (my $next_action = pop @{ $source_stack }) {
-        my ($action, $tiles) = @{ $next_action };
-        if ($action eq $erase_action) {
-            for my $tile ( @{ $tiles } ) {
-                my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
-                delete $self->scene->grid->{$grid_key};
-            }
-        }
-        elsif ($action eq $paint_action) {
-            for my $tile ( @{ $tiles } ) {
-                my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
-                $self->scene->grid->{$grid_key} = $tile;
-                push @{ $self->tile_cache }, $grid_key;
-            }
-        }
+    return unless my $next_action = pop @{ $source_stack };
 
-        push @{ $target_stack }, $next_action;
+    push @{ $target_stack }, $next_action;
 
-        $self->frame->misc_btn->{$source_button}->SetToolTip(scalar @{ $source_stack } . " actions.");
-        $self->frame->misc_btn->{$target_button}->SetToolTip(scalar @{ $target_stack } . " actions.");
-
-        $self->Refresh;
+    # Ok, make the change to the scene.
+    # Turn $next_action into a real action if it's a branch node
+    if ((ref $next_action) eq 'HASH') {
+        $log->info("get real action from branch node");
+        $next_action = $next_action->{branches}->[ $next_action->{current_branch} ];
     }
+
+    my ($action, $tiles) = @{ $next_action };
+    if ($action eq $erase_action) {
+        for my $tile ( @{ $tiles } ) {
+            my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+            delete $self->scene->grid->{$grid_key};
+        }
+    }
+    elsif ($action eq $paint_action) {
+        for my $tile ( @{ $tiles } ) {
+            my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+            $self->scene->grid->{$grid_key} = $tile;
+            push @{ $self->tile_cache }, $grid_key;
+        }
+    }
+
+    # if the top action on the redo stack is a branch node, indicate this on the button
+    my $top_redo_index = $#{ $self->scene->redo_stack };
+    my $redo_tooltip = ($top_redo_index + 1) . " actions.";
+    my $redo_button_bitmap = 'redo';
+    if ( $top_redo_index >= 0 && (ref $self->scene->redo_stack->[$top_redo_index]) eq 'HASH' ) {
+        $redo_button_bitmap = 'branch_redo';
+        $redo_tooltip .= ' ' . scalar @{ $self->scene->redo_stack->[$top_redo_index]->{branches} } . ' branches available.';
+    }
+    
+    IsoApp::set_button_bitmap($self->frame->misc_btn->{redo}, $redo_button_bitmap);
+
+    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+    $self->frame->misc_btn->{'redo'}->SetToolTip($redo_tooltip);
+
+    $self->Refresh;
 
     return;
 }

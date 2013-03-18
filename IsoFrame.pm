@@ -527,8 +527,6 @@ sub change_mode { #{{{1
         ? $MO_TILE
         : $button_mode;
 
-    my $bitmap = wxTheApp->bitmap;
-
     for my $mode ($self->mode, $new_mode) {
 
         # nothing to do when switching to TILE
@@ -537,7 +535,7 @@ sub change_mode { #{{{1
         my $image_stub = $mode eq $MO_AREA
             ? "area_" . $self->current_side
             : $mode;
-        IsoApp::set_button_bitmap($self->mode_btn->{$mode}, $new_mode eq $mode ? $bitmap->{"${image_stub}_on"} : $bitmap->{"${image_stub}_off"});
+        IsoApp::set_button_bitmap($self->mode_btn->{$mode}, $new_mode eq $mode ? "${image_stub}_on" : "${image_stub}_off");
         $self->mode_btn->{$mode}->Refresh;
     }
 
@@ -718,23 +716,22 @@ sub current_side { #{{{1
         $self->_current_side($side);
 
         # switch the image on the area button
-        my $bitmap = wxTheApp->bitmap;
-        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->mode eq $MO_AREA ? $bitmap->{"area_${side}_on"} : $bitmap->{"area_${side}_off"});
+        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->mode eq $MO_AREA ? "area_${side}_on" : "area_${side}_off");
         $self->mode_btn->{$MO_AREA}->Refresh;
 
         # switch the images on the action buttons
         for my $action ($AC_PAINT, $AC_SAMPLE, $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE) {
-            IsoApp::set_button_bitmap($self->action_btn->{$action}, $bitmap->{"action_${action}_$side"});
+            IsoApp::set_button_bitmap($self->action_btn->{$action}, "action_${action}_$side");
             $self->action_btn->{$action}->Refresh;
         }
         my $erase_mode = $self->erase_mode;
         if ($erase_mode ne $AM_ALL) {
-            IsoApp::set_button_bitmap($self->action_btn->{erase}, $bitmap->{"action_erase_${erase_mode}_$side"});
+            IsoApp::set_button_bitmap($self->action_btn->{erase}, "action_erase_${erase_mode}_$side");
             $self->action_btn->{erase}->Refresh;
         }
         my $select_mode = $self->select_mode;
         if ($select_mode ne $AM_ALL) {
-            IsoApp::set_button_bitmap($self->action_btn->{select}, $bitmap->{"action_select_${select_mode}_$side"});
+            IsoApp::set_button_bitmap($self->action_btn->{select}, "action_select_${select_mode}_$side");
             $self->action_btn->{select}->Refresh;
         }
     }
@@ -1020,7 +1017,7 @@ sub set_action_mode { #{{{1
                 $self->select_mode($action_mode);
             }
 
-            IsoApp::set_button_bitmap($self->action_btn->{$action}, $bitmap->{$bitmap_name} );
+            IsoApp::set_button_bitmap($self->action_btn->{$action}, $bitmap_name );
             $self->change_action($action_name);
             $self->Refresh;
 
