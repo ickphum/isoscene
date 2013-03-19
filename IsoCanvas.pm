@@ -1716,7 +1716,7 @@ sub undo_or_redo { #{{{1
     # Ok, make the change to the scene.
     # Turn $next_action into a real action if it's a branch node
     if ((ref $next_action) eq 'HASH') {
-        $log->info("get real action from branch node");
+        $log->debug("get real action from branch node");
         $next_action = $next_action->{branches}->[ $next_action->{current_branch} ];
     }
 

@@ -223,20 +223,6 @@ sub new { #{{{1
     Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(select_all select_none select_visible) ], \&do_selection_tool, $button->GetScreenPosition); });
     push @column_buttons, $button;
 
-    my $undo_btn = $self->misc_btn->{undo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{undo}); 
-    $undo_btn->SetToolTip("Undo");
-    Wx::Event::EVT_LEFT_DOWN($undo_btn, sub { $self->start_undo_or_redo(0); $_[1]->Skip; });
-    Wx::Event::EVT_LEFT_UP($undo_btn, sub { $self->undo_timer->Stop; $_[1]->Skip; });
-    $undo_btn->SetToolTip(scalar @{ $scene->undo_stack } . " actions.");
-    push @column_buttons, $undo_btn;
-
-    my $redo_btn = $self->misc_btn->{redo} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{redo}); 
-    $redo_btn->SetToolTip("Redo");
-    Wx::Event::EVT_LEFT_DOWN($redo_btn, sub { $self->start_undo_or_redo(1); $_[1]->Skip; });
-    Wx::Event::EVT_LEFT_UP($redo_btn, sub { $self->undo_timer->Stop; $_[1]->Skip; });
-    $redo_btn->SetToolTip(scalar @{ $scene->redo_stack } . " actions.");
-    push @column_buttons, $redo_btn;
-
     my $column_button_szr = Wx::FlexGridSizer->new(0,2,0,0);
     for my $button (@column_buttons) {
         if (ref $button) {
@@ -249,8 +235,24 @@ sub new { #{{{1
             $column_button_szr->Add(0, $button);
         }
     }
-
     $tool_sizer->Add($column_button_szr, 0, wxEXPAND);
+
+    my $undo_redo_button_szr = Wx::BoxSizer->new(wxHORIZONTAL);
+    for my $operation (qw(undo undo_redo_menu redo)) {
+        my $button = $self->misc_btn->{$operation} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{$operation}); 
+        if ($operation eq 'undo_redo_menu') {
+            $button->SetToolTip('Undo/Redo Tools');
+            Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(choose_branch undo_to_branch redo_to_branch new_branch) ], \&do_undo_redo_tool, $button->GetScreenPosition); });
+        }
+        else {
+            Wx::Event::EVT_LEFT_DOWN($button, sub { $self->slow_button_down($_[1], $operation); });
+            Wx::Event::EVT_LEFT_UP($button, sub { $self->slow_button_up($_[1], $operation); });
+            $button->SetToolTip(scalar @{ $operation eq 'undo' ? $scene->undo_stack : $scene->redo_stack} . " actions.");
+        }
+        $button->SetWindowStyleFlag(wxBU_EXACTFIT);
+        $undo_redo_button_szr->Add($button, 0, wxEXPAND);
+    }
+    $tool_sizer->Add($undo_redo_button_szr, 0, wxEXPAND);
 
     my $menu_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
     $menu_btn->SetToolTip("Menu");
@@ -423,7 +425,6 @@ sub show_menu { #{{{1
         elsif ($string eq $export) {
             my $dialog = IsoExportOptions->new($self);
             if ($dialog->ShowModal == wxID_OK) {
-                $log->info("ok");
                 $self->canvas->export_scene;
             }
         }
@@ -838,13 +839,21 @@ sub slow_button_down { #{{{1
     $log->debug("slow_button_down: @_");
 
     $self->slow_button_name($operation);
-    $self->slow_button_timer->Start(500, wxTIMER_ONE_SHOT);
 
-    # record the button down position on the cube
-    if ($operation eq 'cube') {
-        my $dc = Wx::ClientDC->new( $event->GetEventObject );
-        $self->cube_x($event->GetLogicalPosition($dc)->x);
-        $self->cube_y($event->GetLogicalPosition($dc)->y);
+    if ($operation =~ /undo|redo/) {
+        $self->start_undo_or_redo($operation eq 'redo');
+    }
+    else {
+
+        $self->slow_button_timer->Start(500, wxTIMER_ONE_SHOT);
+
+        # record the button down position on the cube
+        if ($operation eq 'cube') {
+            my $dc = Wx::ClientDC->new( $event->GetEventObject );
+            $self->cube_x($event->GetLogicalPosition($dc)->x);
+            $self->cube_y($event->GetLogicalPosition($dc)->y);
+        }
+
     }
 
     $event->Skip;
@@ -860,36 +869,44 @@ sub slow_button_up { #{{{1
     # is the timer still running?
     if (my $name = $self->slow_button_name) {
 
-        # clear the button name so the timer does nothing
-        $self->slow_button_name(0);
+        $log->debug("slow_button_name $name");
 
-        my $erase_action = {
-            $AM_CURRENT => $AC_ERASE,
-            $AM_OTHERS => $AC_ERASE_OTHERS,
-            $AM_ALL => $AC_ERASE_ALL,
-        };
-
-        my $select_action = {
-            $AM_CURRENT => $AC_SELECT,
-            $AM_OTHERS => $AC_SELECT_OTHERS,
-            $AM_ALL => $AC_SELECT_ALL,
-        };
-
-        # what does the button do if it's released before the timer goes off?
-        my $fast_button_callback = {
-            paste => [ \&IsoCanvas::clipboard_operation, $self->canvas, $operation ],
-            erase => [ \&change_action, $self, $erase_action->{ $self->erase_mode } ],
-            select => [ \&change_action, $self, $select_action->{ $self->select_mode } ],
-            cube => [ \&cube_click, $self, ],
-        };
-
-        if (my $callback = $fast_button_callback->{$operation}) {
-
-            my $function = shift @{ $callback };
-            $function->(@{ $callback });
+        if ($name =~ /undo|redo/) {
+            $self->undo_timer->Stop;
         }
         else {
-            $log->warn("unknown fast button operation $operation");
+
+            # clear the button name so the timer does nothing
+            $self->slow_button_name(0);
+
+            my $erase_action = {
+                $AM_CURRENT => $AC_ERASE,
+                $AM_OTHERS => $AC_ERASE_OTHERS,
+                $AM_ALL => $AC_ERASE_ALL,
+            };
+
+            my $select_action = {
+                $AM_CURRENT => $AC_SELECT,
+                $AM_OTHERS => $AC_SELECT_OTHERS,
+                $AM_ALL => $AC_SELECT_ALL,
+            };
+
+            # what does the button do if it's released before the timer goes off?
+            my $fast_button_callback = {
+                paste => [ \&IsoCanvas::clipboard_operation, $self->canvas, $operation ],
+                erase => [ \&change_action, $self, $erase_action->{ $self->erase_mode } ],
+                select => [ \&change_action, $self, $select_action->{ $self->select_mode } ],
+                cube => [ \&cube_click, $self, ],
+            };
+
+            if (my $callback = $fast_button_callback->{$operation}) {
+
+                my $function = shift @{ $callback };
+                $function->(@{ $callback });
+            }
+            else {
+                $log->warn("unknown fast button operation $operation");
+            }
         }
 
     }
@@ -921,6 +938,9 @@ sub slow_button_timer_expired { #{{{1
         elsif ($name eq 'cube') {
             $self->change_side_colour;
         }
+        else {
+            $log->info("slow_button_timer_expired for $name, nothing to do");
+        }
         
     }
 
@@ -938,8 +958,13 @@ sub show_button_popup { #{{{1
     my $current_side = $self->current_side;
     my $bitmap = wxTheApp->bitmap;
 
+    # check the size of the first bitmap to find the popup size (assume square images).
+    # We add 12 for the borders around the image and the button.
+    my $size = $bitmap->{ $button_image_names->[0] }->GetHeight + 12;
+
     for my $image_name (@{ $button_image_names }) {
-        my $button = Wx::BitmapButton->new($popup, -1, $bitmap->{$image_name});
+        my $button_bitmap = $bitmap->{$image_name};
+        my $button = Wx::BitmapButton->new($popup, -1, $button_bitmap);
         $button->SetToolTip( join(' ', map { ucfirst $_ } split(/_/, $image_name)) );
         $button->SetName($image_name);
         $sizer->Add($button);
@@ -947,12 +972,39 @@ sub show_button_popup { #{{{1
         Wx::Event::EVT_BUTTON($popup, $button, $callback);
     }
 
-    my $width = 52 * scalar @{ $button_image_names };
+    my $width = $size * scalar @{ $button_image_names };
 
-    $popup->SetSize($width, 53);
+    $popup->SetSize($width, $size);
     $sizer->Layout;
-    $popup->Move($position);
+
+    # show popup to the side of the invoking button; this looks better (i think) and avoids a bug
+    # when a button appears directly under the pointer and is then ignored.
+    $popup->Move($position->x + $size, $position->y);
     $popup->Popup;
+
+    return;
+}
+
+################################################################################
+sub do_undo_redo_tool { #{{{1
+    my ($popup, $event) = @_;
+
+    my $frame = $popup->GetParent;
+
+    $popup->Hide;
+    $popup->Close;
+
+    my $button_name = $event->GetEventObject->GetName;
+    $log->info("do_undo_redo_tool: $button_name");
+
+    if ($button_name eq 'choose_branch') {
+    }
+    elsif ($button_name eq 'undo_to_branch') {
+    }
+    elsif ($button_name eq 'redo_to_branch') {
+    }
+    elsif ($button_name eq 'new_branch') {
+    }
 
     return;
 }
@@ -967,7 +1019,7 @@ sub do_selection_tool { #{{{1
     $popup->Close;
 
     my $button_name = $event->GetEventObject->GetName;
-    $log->info("do_selection_tool: $button_name");
+    $log->debug("do_selection_tool: $button_name");
 
     if ($button_name eq 'select_none') {
         $frame->canvas->set_selection_for_all(0);
@@ -1025,10 +1077,11 @@ sub set_action_mode { #{{{1
         });
     }
 
-    $popup->SetSize(156, 53);
+    $popup->SetSize(156, 52);
     $sizer->Layout;
     my $button = $self->action_btn->{$action};
-    $popup->Move($button->GetScreenPosition());
+    my $position = $button->GetScreenPosition();
+    $popup->Move($position->x + 52, $position->y);
     $popup->Popup;
 
     return;
@@ -1108,7 +1161,8 @@ sub show_paste_list { #{{{1
         $popup->SetSize(min($self->GetSize->GetWidth, $images->GetImageCount * 85),100);
 
         my $button = $self->clipboard_btn->{paste};
-        $popup->Move($button->GetScreenPosition());
+        my $position = $button->GetScreenPosition();
+        $popup->Move($position->x + 52, $position->y);
 
         $popup->Popup;
 }

@@ -30,7 +30,8 @@ sub new { # {{{1
     $self->xrc->InitAllHandlers;
     $self->xrc->Load('export_options.xrc');
 
-    my @images = qw(cube menu paint sample import erase undo redo branch_redo
+    my @images = qw(cube menu paint sample import erase
+        undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
         small_paste small_cube);
