@@ -35,7 +35,7 @@ __PACKAGE__->mk_accessors( qw(
     
     import_file
 
-    undo_timer undo_or_redo_flag
+    undo_timer undo_or_redo_flag current_branches
 
     slow_button_timer slow_button_name
 ));
@@ -242,7 +242,20 @@ sub new { #{{{1
         my $button = $self->misc_btn->{$operation} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{$operation}); 
         if ($operation eq 'undo_redo_menu') {
             $button->SetToolTip('Undo/Redo Tools');
-            Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(choose_branch undo_to_branch redo_to_branch new_branch) ], \&do_undo_redo_tool, $button->GetScreenPosition); });
+            Wx::Event::EVT_BUTTON($self, $button, sub {
+                my ($self, $event) = @_;
+
+                $log->info("undo_redo_menu @_");
+                my $choices = [ qw(undo_to_branch redo_to_branch new_branch) ];
+
+                # if we're on a branch, display the choose_branch button
+                if ($self->current_branches) {
+                    unshift @{ $choices }, 'choose_branch';
+                }
+
+                $self->show_button_popup($choices, \&do_undo_redo_tool, $button->GetScreenPosition);
+                return;
+            });
         }
         else {
             Wx::Event::EVT_LEFT_DOWN($button, sub { $self->slow_button_down($_[1], $operation); });
@@ -998,6 +1011,9 @@ sub do_undo_redo_tool { #{{{1
     $log->info("do_undo_redo_tool: $button_name");
 
     if ($button_name eq 'choose_branch') {
+
+        # we should have a list of branches in $self->current_branches
+
     }
     elsif ($button_name eq 'undo_to_branch') {
     }

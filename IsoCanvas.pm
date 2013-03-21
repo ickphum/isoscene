@@ -949,7 +949,6 @@ sub clipboard_operation { #{{{1
         # copy or cut, so first step is to copy selected tiles to clipboard
         my ($min_x, $min_y, $max_x, $max_y);
         my @clipboard_tiles = ();
-        my @selected_keys = ();
 
         while (my ($key, $tile) = each %{ $self->scene->grid }) {
 
@@ -981,8 +980,6 @@ sub clipboard_operation { #{{{1
                 $max_y = $tile_max_y if ! defined $max_y || $tile_max_y > $max_y;
 
                 push @clipboard_tiles, $clipboard_tile;
-                push @selected_keys, $key if $operation eq 'cut';
-
             }
         }
 
@@ -991,8 +988,9 @@ sub clipboard_operation { #{{{1
 
         # we've got the clipboard tiles in the list, we can do the cut now if req.
         if ($operation eq 'cut') {
-            $self->add_undo_action($IsoFrame::AC_ERASE, \@selected_keys);
-            for my $key (@selected_keys) {
+            my $selected_keys = [ map { "$_->{facing}_$_->{left}_$_->{top}_$_->{right}" } @clipboard_tiles ];
+            $self->add_undo_action($IsoFrame::AC_ERASE, $selected_keys);
+            for my $key (@{ $selected_keys }) {
                 delete $self->scene->grid->{$key};
             }
         }
@@ -1742,8 +1740,12 @@ sub undo_or_redo { #{{{1
     if ( $top_redo_index >= 0 && (ref $self->scene->redo_stack->[$top_redo_index]) eq 'HASH' ) {
         $redo_button_bitmap = 'branch_redo';
         $redo_tooltip .= ' ' . scalar @{ $self->scene->redo_stack->[$top_redo_index]->{branches} } . ' branches available.';
+        $self->frame->current_branches($self->scene->redo_stack->[$top_redo_index]->{branches});
     }
-    
+    else {
+        $self->frame->current_branches(undef);
+    }
+
     IsoApp::set_button_bitmap($self->frame->misc_btn->{redo}, $redo_button_bitmap);
 
     $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
