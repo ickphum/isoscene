@@ -35,7 +35,7 @@ __PACKAGE__->mk_accessors( qw(
     
     import_file
 
-    undo_timer undo_or_redo_flag current_branches
+    undo_timer undo_or_redo_flag current_branches branch_choice_pnl
 
     slow_button_timer slow_button_name
 ));
@@ -265,6 +265,7 @@ sub new { #{{{1
         $button->SetWindowStyleFlag(wxBU_EXACTFIT);
         $undo_redo_button_szr->Add($button, 0, wxEXPAND);
     }
+
     $tool_sizer->Add($undo_redo_button_szr, 0, wxEXPAND);
 
     my $menu_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
@@ -285,7 +286,18 @@ sub new { #{{{1
     $self->canvas(IsoCanvas->new($self, $scene));
     $log->debug("canvas built ok");
 
-    $sizer->Add($self->canvas, 1, wxEXPAND, 0 );
+    # fix redo button in case we saved on a branch point
+    $self->canvas->set_redo_button_state;
+
+    my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
+
+    $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
+
+    $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
+    $canvas_side_sizer->Add($self->branch_choice_pnl, 0, wxEXPAND );
+    $self->branch_choice_pnl->Hide;
+
+    $sizer->Add($canvas_side_sizer, 1, wxEXPAND);
 
     $self->canvas->SetFocus;
 
@@ -1013,6 +1025,19 @@ sub do_undo_redo_tool { #{{{1
     if ($button_name eq 'choose_branch') {
 
         # we should have a list of branches in $self->current_branches
+        for my $branch ( @{ $frame->current_branches } ) {
+
+            # we want to render all tiles in this branch 
+
+        }
+
+        $frame->branch_choice_pnl->Show;
+        $frame->Layout;
+
+        # 1. Turn current branch into list of redo_stack + current action
+        # 2. Set redo stack to new branch list
+        # 3. Set current branch index to new value
+        # 4. Pop redo stack into new branch attribute in branch node
 
     }
     elsif ($button_name eq 'undo_to_branch') {

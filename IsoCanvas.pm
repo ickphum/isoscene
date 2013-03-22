@@ -1733,6 +1733,18 @@ sub undo_or_redo { #{{{1
         }
     }
 
+    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+    $self->set_redo_button_state;
+
+    $self->Refresh;
+
+    return;
+}
+
+################################################################################
+sub set_redo_button_state { #{{{1
+    my ($self) = @_;
+
     # if the top action on the redo stack is a branch node, indicate this on the button
     my $top_redo_index = $#{ $self->scene->redo_stack };
     my $redo_tooltip = ($top_redo_index + 1) . " actions.";
@@ -1746,14 +1758,8 @@ sub undo_or_redo { #{{{1
         $self->frame->current_branches(undef);
     }
 
-    IsoApp::set_button_bitmap($self->frame->misc_btn->{redo}, $redo_button_bitmap);
-
-    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+    IsoApp::set_button_bitmap($self->frame->misc_btn->{'redo'}, $redo_button_bitmap);
     $self->frame->misc_btn->{'redo'}->SetToolTip($redo_tooltip);
-
-    $self->Refresh;
-
-    return;
 }
 
 ################################################################################
