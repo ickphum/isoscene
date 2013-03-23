@@ -13,6 +13,7 @@ use Log::Log4perl qw(get_logger);
 use File::Basename;
 use Wx::XRC;
 use Alien::wxWidgets;
+use Time::Piece;
 
 use IsoFrame;
 use IsoScene;
@@ -32,14 +33,14 @@ sub new { # {{{1
     $self->xrc->Load('choose_branch.xrc');
 
     my @images = qw(cube menu paint sample import erase
-        undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
+        undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch stop
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
         small_paste small_cube);
     for my $image_name (qw(move area_L area_T area_R flood)) {
         push @images, "${image_name}_on", "${image_name}_off";
     }
-    for my $action (grep { $_ !~ /$IsoFrame::AC_IMPORT|$IsoFrame::AC_PASTE/ } @IsoFrame::ACTIONS) {
+    for my $action (grep { $_ !~ /$IsoFrame::AC_IMPORT|$IsoFrame::AC_PASTE|$IsoFrame::AC_CHOOSE_BRANCH/ } @IsoFrame::ACTIONS) {
         if ($action =~ /_all\z/) {
             push @images, "action_${action}";
         }
@@ -172,6 +173,60 @@ sub OnExit { # {{{2
     $self->config->save;
 
     return 1;
+}
+
+################################################################################
+sub datetime_description {
+    my ($tp) = @_;
+
+    my $now = localtime;
+    my $minutes = int(($now - scalar $tp ) / 60);
+    my $value;
+
+    if ($minutes < 600) {
+
+        # in the last 10 hours, give a relative time ago ie M minutes ago or H hours, M minutes ago.
+        if ($minutes < 60) {
+            $value = '';
+        }
+        else {
+            my $hours = int($minutes/60);
+            $minutes -= $hours * 60;
+            $value = $hours . ' ' . ($hours == 1 ? 'hour' : 'hours') . ', ';
+        }
+        $value .= $minutes . ' ' . ($minutes == 1 ? 'minute' : 'minutes') . ' ago';
+    }
+    else {
+
+        # date and time, converting to today, yesterday, day before yesterday, last <weekday> where possible or just date.
+        my $elapsed_days = $now->strftime('%j') - $tp->strftime('%j');
+
+        my %day_term = (
+            0 => 'today',
+            1 => 'yesterday',
+            2 => 'day before yesterday',
+        );
+
+        my $day = $day_term{$elapsed_days};
+        unless ($day) {
+            if ($elapsed_days < 7) {
+
+                # use "Last <weekday>" in the last week
+                $day = "last " . $tp->strftime("%A");
+            }
+            else {
+
+                # final catch-all, just Fri Mar 13.
+                $day = $tp->strftime("%a %b %d");
+            }
+        }
+
+        ($value = $tp->strftime("%l:%M %P") . " $day") =~ s/\A\s+//;
+    }
+
+    $value =~ s/, 0 minutes//;
+
+    return $value;
 }
 
 1;

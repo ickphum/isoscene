@@ -226,7 +226,7 @@ sub new { #{{{1
         $self->action_cursor->{$action} = Wx::Cursor->new($cursor_image);
     }
 
-    # add move as a pseudo-action as it has a separate cursor
+    # add move as pseudo-action as it has a separate cursor
     $self->action_cursor->{move} = Wx::Cursor->new($app->bitmap->{move_on}->ConvertToImage);
 
     $self->set_cursor;
@@ -1671,7 +1671,10 @@ sub add_undo_action { #{{{1
         # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
         # from the branch node.
         my $current_branch = $new_branch_node->{current_branch};
-        $new_branch_node->{branches}->[ $current_branch ] = [ @{ $self->scene->redo_stack }, $new_branch_node->{branches}->[$current_branch],  ];
+        $new_branch_node->{branches}->[ $current_branch ] = {
+            last_current_at => scalar localtime,
+            actions => [ @{ $self->scene->redo_stack }, $new_branch_node->{branches}->[$current_branch],  ],
+        };
 
         # add the new branch (containing the new undo action) and make it current
         push @{ $new_branch_node->{branches} }, $new_action;
@@ -1687,6 +1690,9 @@ sub add_undo_action { #{{{1
     else {
         push @{ $self->scene->undo_stack }, $new_action;
     }
+
+    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+    $self->set_redo_button_state;
 
     return;
 }
@@ -1752,10 +1758,6 @@ sub set_redo_button_state { #{{{1
     if ( $top_redo_index >= 0 && (ref $self->scene->redo_stack->[$top_redo_index]) eq 'HASH' ) {
         $redo_button_bitmap = 'branch_redo';
         $redo_tooltip .= ' ' . scalar @{ $self->scene->redo_stack->[$top_redo_index]->{branches} } . ' branches available.';
-        $self->frame->current_branches($self->scene->redo_stack->[$top_redo_index]->{branches});
-    }
-    else {
-        $self->frame->current_branches(undef);
     }
 
     IsoApp::set_button_bitmap($self->frame->misc_btn->{'redo'}, $redo_button_bitmap);

@@ -26,7 +26,7 @@ use IsoExportOptions;
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    canvas
+    tool_panel canvas branch_choice_pnl
 
     mode action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -35,7 +35,7 @@ __PACKAGE__->mk_accessors( qw(
     
     import_file
 
-    undo_timer undo_or_redo_flag current_branches branch_choice_pnl
+    undo_timer undo_or_redo_flag
 
     slow_button_timer slow_button_name
 ));
@@ -93,7 +93,8 @@ our @ACTIONS = our (
     $AC_SELECT,
     $AC_SELECT_OTHERS,
     $AC_SELECT_ALL,
-    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade import paste select_current select_others select_all);
+    $AC_CHOOSE_BRANCH,
+    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade import paste select_current select_others select_all choose_branch);
 
 ################################################################################
 # Constructor. Creates a Wx::Frame object, adds a sizer and a status bar and
@@ -147,7 +148,7 @@ sub new { #{{{1
 
     my $bitmap = $app->bitmap;
 
-    my $tool_panel = Wx::Panel->new($self,-1);
+    $self->tool_panel(my $tool_panel = Wx::Panel->new($self,-1));
     $tool_panel->SetSizer(my $tool_sizer = Wx::BoxSizer->new(wxVERTICAL));
 
     my $cube_pnl = Wx::Panel->new($tool_panel, -1, wxDefaultPosition, [ $bitmap->{cube}->GetWidth,  $bitmap->{cube}->GetHeight ], 0);
@@ -249,7 +250,7 @@ sub new { #{{{1
                 my $choices = [ qw(undo_to_branch redo_to_branch new_branch) ];
 
                 # if we're on a branch, display the choose_branch button
-                if ($self->current_branches) {
+                if ((ref $self->canvas->scene->redo_stack->[-1]) eq 'HASH') {
                     unshift @{ $choices }, 'choose_branch';
                 }
 
@@ -296,6 +297,11 @@ sub new { #{{{1
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
     $canvas_side_sizer->Add($self->branch_choice_pnl, 0, wxEXPAND );
     $self->branch_choice_pnl->Hide;
+
+    my $branch_chc = $self->branch_choice_pnl->FindWindow('branch_chc');
+    Wx::Event::EVT_CHOICE($self, $branch_chc, sub { $log->info("branch_chc @_"); });
+    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), \&confirm_branch_choice);
+    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), \&cancel_branch_choice);
 
     $sizer->Add($canvas_side_sizer, 1, wxEXPAND);
 
@@ -699,31 +705,34 @@ sub cube_paint_event { #{{{1
     $dc->DrawPolygon(\@right_points, $w2, $h2);
 
     # draw action bitmap(s) as required
-    my $app = wxTheApp;
     my $action = $frame->action;
-    my $side_bitmap_name = $action =~ /erase/
-        ? 'erase'
-        : $action =~ /select/
-            ? 'select'
-            : $action eq $AC_PASTE
-                ? 'small_paste'
-                : $action;
-    my $side_bitmap = $app->bitmap->{$side_bitmap_name};
+    unless ($action =~ /$AC_CHOOSE_BRANCH/) {
 
-    my %side_offset = (
-        $SI_LEFT => [ -40, -3 ],
-        $SI_TOP => [ -15, -44 ],
-        $SI_RIGHT => [ 10, -3 ],
-    );
-#    my @sides = $frame->action =~ /\A(?:paint|erase_current|sample|lighten|darken|shade|import|select_current)\z/
-    my @sides = $action =~ /_all|paste/
-            ? ($SI_LEFT, $SI_TOP, $SI_RIGHT)
-            : $action =~ /_others\z/
-                ? grep { $_ ne $frame->current_side } ($SI_LEFT, $SI_TOP, $SI_RIGHT)
-                : ($frame->current_side);
-    for my $side (@sides) {
-        my $brush_offset = $side_offset{ $side };
-        $dc->DrawBitmap($side_bitmap, $w2 + $brush_offset->[0], $h2 + $brush_offset->[1], 1);
+        my $app = wxTheApp;
+        my $side_bitmap_name = $action =~ /erase/
+            ? 'erase'
+            : $action =~ /select/
+                ? 'select'
+                : $action eq $AC_PASTE
+                    ? 'small_paste'
+                    : $action;
+        my $side_bitmap = $app->bitmap->{$side_bitmap_name};
+
+        my %side_offset = (
+            $SI_LEFT => [ -40, -3 ],
+            $SI_TOP => [ -15, -44 ],
+            $SI_RIGHT => [ 10, -3 ],
+        );
+    #    my @sides = $frame->action =~ /\A(?:paint|erase_current|sample|lighten|darken|shade|import|select_current)\z/
+        my @sides = $action =~ /_all|paste/
+                ? ($SI_LEFT, $SI_TOP, $SI_RIGHT)
+                : $action =~ /_others\z/
+                    ? grep { $_ ne $frame->current_side } ($SI_LEFT, $SI_TOP, $SI_RIGHT)
+                    : ($frame->current_side);
+        for my $side (@sides) {
+            my $brush_offset = $side_offset{ $side };
+            $dc->DrawBitmap($side_bitmap, $w2 + $brush_offset->[0], $h2 + $brush_offset->[1], 1);
+        }
     }
 
     $log->debug("done cube_paint_event");
@@ -1024,14 +1033,30 @@ sub do_undo_redo_tool { #{{{1
 
     if ($button_name eq 'choose_branch') {
 
-        # we should have a list of branches in $self->current_branches
-        for my $branch ( @{ $frame->current_branches } ) {
+        my $branch_chc = $frame->branch_choice_pnl->FindWindow('branch_chc');
+        $branch_chc->Clear;
+
+        # grab the top item on the redo stack; it should be a branch node
+        my $branch_node = $frame->canvas->scene->redo_stack->[-1];
+        $log->logdie("top redo item not a branch node: " . Dumper($branch_node))
+            unless (ref $branch_node) eq 'HASH';
+
+        # we have a list of branches in $branch_node->{branches}
+        $log->debug("branches " . Dumper($branch_node->{branches}));
+        for my $branch ( @{ $branch_node->{branches} } ) {
 
             # we want to render all tiles in this branch 
-
+            $branch_chc->Append( (ref $branch) eq 'HASH' 
+                ? 'Last current: ' . IsoApp::datetime_description($branch->{last_current_at})
+                : 'Current branch');
         }
 
+        $branch_chc->SetSelection($branch_node->{current_branch});
+
+        $frame->change_action($AC_CHOOSE_BRANCH);
+        $frame->change_mode($MO_MOVE) unless $frame->mode eq $MO_MOVE;
         $frame->branch_choice_pnl->Show;
+        $frame->tool_panel->Hide;
         $frame->Layout;
 
         # 1. Turn current branch into list of redo_stack + current action
@@ -1046,6 +1071,38 @@ sub do_undo_redo_tool { #{{{1
     }
     elsif ($button_name eq 'new_branch') {
     }
+
+    return;
+}
+
+################################################################################
+sub confirm_branch_choice { #{{{1
+    my ($self, $event) = @_;
+
+    $log->info("confirm_branch_choice");
+
+    $self->change_action($AC_PAINT);
+    $self->branch_choice_pnl->Hide;
+    $self->tool_panel->Show;
+    $self->Layout;
+
+    $event->Skip if $event;
+
+    return;
+}
+
+################################################################################
+sub cancel_branch_choice { #{{{1
+    my ($self, $event) = @_;
+
+    $log->info("cancel_branch_choice");
+
+    $self->change_action($AC_PAINT);
+    $self->branch_choice_pnl->Hide;
+    $self->tool_panel->Show;
+    $self->Layout;
+
+    $event->Skip if $event;
 
     return;
 }
