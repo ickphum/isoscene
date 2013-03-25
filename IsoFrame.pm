@@ -792,6 +792,27 @@ sub update_scene_color { #{{{1
 }
 
 ################################################################################
+# toggle the appearance of the tool panel
+sub toggle_tool_panel { #{{{1
+    my ($self) = @_;
+
+    my $hide = $self->tool_panel->IsShown;
+
+    my ($width, $height) = $self->tool_panel->GetSizeWH;
+    $log->info("tp width $width");
+
+    # scroll the canvas so the scene remains in the same screen position after 
+    # the canvas widens/narrows depending on the state of the tool panel.
+    my $origin_x = $self->canvas->scene->origin_x;
+    $self->canvas->scene->origin_x($origin_x + ($hide ? 1 : -1) * $width);
+    $self->canvas->tile_cache(0);
+
+    $self->tool_panel->Show(! $hide);
+
+    return;
+}
+
+################################################################################
 sub save_to_file { #{{{1
     my ($self) = @_;
 
@@ -1063,7 +1084,7 @@ sub do_undo_redo_tool { #{{{1
         $frame->change_action($AC_CHOOSE_BRANCH);
         $frame->change_mode($MO_MOVE) unless $frame->mode eq $MO_MOVE;
         $frame->branch_choice_pnl->Show;
-        $frame->tool_panel->Hide;
+        $frame->toggle_tool_panel;
         $frame->Layout;
 
         # don't want the scene saving while we're changing branch.
@@ -1105,7 +1126,7 @@ sub finish_branch_choice { #{{{1
 
     $self->change_action($self->previous_action);
     $self->branch_choice_pnl->Hide;
-    $self->tool_panel->Show;
+    $self->toggle_tool_panel;
     $self->canvas->set_undo_redo_button_states;
     $self->Layout;
 

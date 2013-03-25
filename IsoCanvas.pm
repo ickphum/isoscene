@@ -1760,7 +1760,7 @@ sub change_to_branch { #{{{1
     # 1. Turn existing current branch into list of redo_stack + current action
     # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
     # from the branch node.
-    my $branch_node = $self->scene->redo_stack->[-1];
+    my $branch_node = pop @{ $self->scene->redo_stack };
     my $current_branch = $branch_node->{current_branch};
     $log->info("current_branch $current_branch, branch_node: " . Dumper($branch_node));
     $branch_node->{branches}->[ $current_branch ] = {
@@ -1774,8 +1774,11 @@ sub change_to_branch { #{{{1
     # 3. Set current branch index to new value
     $branch_node->{current_branch} = $branch_index;
 
-    # 4. Pop redo stack into new branch attribute in branch node
+    # 4. Pop new action stack into new branch attribute in branch node
     $branch_node->{branches}->[ $branch_index ] = pop @{ $self->scene->redo_stack };
+
+    # 5. Push the branch node onto the redo stack
+    push @{ $self->scene->redo_stack }, $branch_node;
 
     if ($redo_flag) {
 
