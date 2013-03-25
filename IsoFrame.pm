@@ -28,14 +28,14 @@ use IsoExportOptions;
 __PACKAGE__->mk_accessors( qw(
     tool_panel canvas branch_choice_pnl
 
-    mode action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
+    mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
     cube_x cube_y cube_width cube_height cube_brush
     _current_side
     
     import_file
 
-    undo_timer undo_or_redo_flag
+    undo_timer undo_or_redo_flag branch_choice_position original_branch
 
     slow_button_timer slow_button_name
 ));
@@ -261,7 +261,6 @@ sub new { #{{{1
         else {
             Wx::Event::EVT_LEFT_DOWN($button, sub { $self->slow_button_down($_[1], $operation); });
             Wx::Event::EVT_LEFT_UP($button, sub { $self->slow_button_up($_[1], $operation); });
-            $button->SetToolTip(scalar @{ $operation eq 'undo' ? $scene->undo_stack : $scene->redo_stack} . " actions.");
         }
         $button->SetWindowStyleFlag(wxBU_EXACTFIT);
         $undo_redo_button_szr->Add($button, 0, wxEXPAND);
@@ -288,7 +287,7 @@ sub new { #{{{1
     $log->debug("canvas built ok");
 
     # fix redo button in case we saved on a branch point
-    $self->canvas->set_redo_button_state;
+    $self->canvas->set_undo_redo_button_states;
 
     my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
 
@@ -298,10 +297,9 @@ sub new { #{{{1
     $canvas_side_sizer->Add($self->branch_choice_pnl, 0, wxEXPAND );
     $self->branch_choice_pnl->Hide;
 
-    my $branch_chc = $self->branch_choice_pnl->FindWindow('branch_chc');
-    Wx::Event::EVT_CHOICE($self, $branch_chc, sub { $log->info("branch_chc @_"); });
-    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), \&confirm_branch_choice);
-    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), \&cancel_branch_choice);
+    Wx::Event::EVT_CHOICE($self, $self->branch_choice_pnl->FindWindow('branch_chc'), \&change_branch_choice);
+    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), sub { $_[0]->finish_branch_choice(1); } );
+    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), sub { $_[0]->finish_branch_choice(0); } );
 
     $sizer->Add($canvas_side_sizer, 1, wxEXPAND);
 
@@ -1051,6 +1049,15 @@ sub do_undo_redo_tool { #{{{1
                 : 'Current branch');
         }
 
+        # remember the original branch in case we cancel, and the current action so we can 
+        # restore it after the change.
+        $frame->original_branch($branch_node->{current_branch});
+        $frame->previous_action($frame->action);
+
+        # the size of the undo stack is our reference point; when we change branches, we must undo to this
+        # point before redoing the new branch
+        $frame->branch_choice_position( $#{ $frame->canvas->scene->undo_stack } );
+
         $branch_chc->SetSelection($branch_node->{current_branch});
 
         $frame->change_action($AC_CHOOSE_BRANCH);
@@ -1059,10 +1066,8 @@ sub do_undo_redo_tool { #{{{1
         $frame->tool_panel->Hide;
         $frame->Layout;
 
-        # 1. Turn current branch into list of redo_stack + current action
-        # 2. Set redo stack to new branch list
-        # 3. Set current branch index to new value
-        # 4. Pop redo stack into new branch attribute in branch node
+        # don't want the scene saving while we're changing branch.
+        wxTheApp->autosave_timer->Stop;
 
     }
     elsif ($button_name eq 'undo_to_branch') {
@@ -1076,33 +1081,35 @@ sub do_undo_redo_tool { #{{{1
 }
 
 ################################################################################
-sub confirm_branch_choice { #{{{1
+sub change_branch_choice { #{{{1
     my ($self, $event) = @_;
 
-    $log->info("confirm_branch_choice");
-
-    $self->change_action($AC_PAINT);
-    $self->branch_choice_pnl->Hide;
-    $self->tool_panel->Show;
-    $self->Layout;
-
-    $event->Skip if $event;
+    $log->info("change_branch_choice " . $event->GetSelection);
+    $self->canvas->change_to_branch($event->GetSelection, 1);
 
     return;
 }
 
 ################################################################################
-sub cancel_branch_choice { #{{{1
-    my ($self, $event) = @_;
+sub finish_branch_choice { #{{{1
+    my ($self, $confirm) = @_;
 
-    $log->info("cancel_branch_choice");
+    $log->info("finish_branch_choice");
 
-    $self->change_action($AC_PAINT);
+    # if we're confirming, everything is ok already. Otherwise,
+    # change back to original branch but don't redo, which will leave the undo/redo
+    # stacks where they were.
+    unless ($confirm) {
+        $self->canvas->change_to_branch($self->original_branch, 0);
+    }
+
+    $self->change_action($self->previous_action);
     $self->branch_choice_pnl->Hide;
     $self->tool_panel->Show;
+    $self->canvas->set_undo_redo_button_states;
     $self->Layout;
 
-    $event->Skip if $event;
+    wxTheApp->autosave_timer->Start(wxTheApp->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
 
     return;
 }

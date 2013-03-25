@@ -1691,15 +1691,14 @@ sub add_undo_action { #{{{1
         push @{ $self->scene->undo_stack }, $new_action;
     }
 
-    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
-    $self->set_redo_button_state;
+    $self->set_undo_redo_button_states;
 
     return;
 }
 
 ################################################################################
 sub undo_or_redo { #{{{1
-    my ($self, $redo) = @_;
+    my ($self, $redo, $no_refresh) = @_;
 
     # if we didn't get an explicit type, it's a timer and we check the flag set on LEFT_DOWN.
     unless (defined $redo) {
@@ -1739,16 +1738,91 @@ sub undo_or_redo { #{{{1
         }
     }
 
-    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
-    $self->set_redo_button_state;
+    unless ($no_refresh) {
+        $self->set_undo_redo_button_states;
+        $self->Refresh;
+    }
 
+    return;
+}
+
+################################################################################
+sub change_to_branch { #{{{1
+    my ($self, $branch_index, $redo_flag) = @_;
+    $log->info("change_to_branch branch_index $branch_index, redo_flag $redo_flag");
+
+    # if the undo stack is not at the reference position, undo back to there
+    # before we change branch.
+    $self->undo_to_position($self->frame->branch_choice_position);
+
+    # make the selected branch current
+
+    # 1. Turn existing current branch into list of redo_stack + current action
+    # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
+    # from the branch node.
+    my $branch_node = $self->scene->redo_stack->[-1];
+    my $current_branch = $branch_node->{current_branch};
+    $log->info("current_branch $current_branch, branch_node: " . Dumper($branch_node));
+    $branch_node->{branches}->[ $current_branch ] = {
+        last_current_at => scalar localtime,
+        actions => [ @{ $self->scene->redo_stack }, $branch_node->{branches}->[$current_branch],  ],
+    };
+
+    # 2. Set redo stack to new branch list
+    $self->scene->redo_stack( $branch_node->{branches}->[$branch_index]->{actions} );
+
+    # 3. Set current branch index to new value
+    $branch_node->{current_branch} = $branch_index;
+
+    # 4. Pop redo stack into new branch attribute in branch node
+    $branch_node->{branches}->[ $branch_index ] = pop @{ $self->scene->redo_stack };
+
+    if ($redo_flag) {
+
+        # redo all the way along this branch
+        $self->redo_all_actions;
+    }
+
+    return;
+}
+
+################################################################################
+# We should undo until no harkonnen breathes arrakeen air. And the stack position
+# matches the specified position.
+sub undo_to_position { #{{{1
+    my ($self, $undo_stack_position) = @_;
+
+    if ($#{ $self->scene->undo_stack } < $undo_stack_position) {
+        $log->logconfess("current undo stack is smaller than undo_stack_position $undo_stack_position : " . $#{ $self->scene->undo_stack });
+    }
+
+    while ($#{ $self->scene->undo_stack } > $undo_stack_position) {
+        $self->undo_or_redo(0,1);
+    }
+
+    $self->set_undo_redo_button_states;
     $self->Refresh;
 
     return;
 }
 
 ################################################################################
-sub set_redo_button_state { #{{{1
+# Redo all available actions.
+sub redo_all_actions { #{{{1
+    my ($self) = @_;
+
+    while (@{ $self->scene->redo_stack }) {
+        $self->undo_or_redo(1,1);
+    }
+
+    $self->set_undo_redo_button_states;
+    $self->Refresh;
+
+    return;
+}
+
+################################################################################
+sub set_undo_redo_button_states { #{{{1
     my ($self) = @_;
 
     # if the top action on the redo stack is a branch node, indicate this on the button
@@ -1762,6 +1836,10 @@ sub set_redo_button_state { #{{{1
 
     IsoApp::set_button_bitmap($self->frame->misc_btn->{'redo'}, $redo_button_bitmap);
     $self->frame->misc_btn->{'redo'}->SetToolTip($redo_tooltip);
+
+    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+
+    return;
 }
 
 ################################################################################
