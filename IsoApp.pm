@@ -11,6 +11,7 @@ use YAML qw(DumpFile LoadFile);
 use Storable qw(dclone);
 use Log::Log4perl qw(get_logger);
 use File::Basename;
+use File::Slurp qw(read_file);
 use Wx::XRC;
 use Alien::wxWidgets;
 use Time::Piece;
@@ -21,7 +22,7 @@ use IsoConfig;
 
 my $log = get_logger;
 
-__PACKAGE__->mk_accessors( qw(bitmap scene config autosave_timer frame xrc) );
+__PACKAGE__->mk_accessors( qw(bitmap scene config autosave_timer script_timer script_delay script_lines script_action action_args frame xrc) );
 
 sub new { # {{{1
     my( $class, $option ) = @_;
@@ -31,6 +32,7 @@ sub new { # {{{1
     $self->xrc->InitAllHandlers;
     $self->xrc->Load('export_options.xrc');
     $self->xrc->Load('choose_branch.xrc');
+    $self->xrc->Load('message_pane.xrc');
 
     my @images = qw(cube menu paint sample import erase
         undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
@@ -66,9 +68,6 @@ sub new { # {{{1
     $self->bitmap(\%bitmap);
 
     $self->config( IsoConfig->new() );
-    $self->autosave_timer(Wx::Timer->new($self));
-    $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
-    Wx::Event::EVT_TIMER($self, -1, sub { $self->scene->save; $self->config->save; });
 
     my $filename = $option->{file} ||
         ((defined wxTheApp->config->previous_scene_file && -f (wxTheApp->config->previous_scene_file . '.isc'))
@@ -84,7 +83,143 @@ sub new { # {{{1
     $self->SetTopWindow($self->frame);
     $self->frame->Show(1);
 
+    $self->autosave_timer(Wx::Timer->new($self));
+    Wx::Event::EVT_TIMER($self, $self->autosave_timer, sub { $self->scene->save; $self->config->save; });
+
+    if (my $file = $option->{script}) {
+
+
+        if (-r $file && -f $file) {
+            $self->script_lines([ read_file($file) ]);
+#            $self->script_pos(0);
+            $self->script_timer(Wx::Timer->new($self));
+            Wx::Event::EVT_TIMER($self, $self->script_timer, \&do_script_action);
+            $self->frame->toggle_tool_panel;
+            $self->script_delay($self->config->script_delay_milliseconds);
+            $self->script_timer->Start($self->script_delay, wxTIMER_CONTINUOUS);
+            $self->config->autosave_on_exit(0);
+            $self->get_next_script_action;
+        }
+        else {
+            $log->debug("Script file '$file' is not a readable plain file");
+        }
+
+    }
+    else {
+
+        # don't start the autosave timer while we're playing a script. It will start afterward.
+        $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
+    }
+
     return $self;
+}
+
+################################################################################
+sub get_next_script_action { #{{{2
+    my ($self) = @_;
+
+    my $running = 1;
+
+    if (my $line = shift @{ $self->script_lines }) {
+        if ($line =~ /\A(redo\w*|undo\w*|delay|branch|message)\s?(\S.*)?/) {
+            my ($action, $args) = ($1,$2);
+
+            $log->info("new action $action, args " . ($args || ''));
+            $self->script_action($action);
+            $self->action_args($args);
+        }
+        else {
+            $log->logdie("unknown script line '$line'");
+        }
+    }
+    else {
+        $self->stop_script;
+        $running = 0;
+    }
+
+    return $running;
+}
+
+################################################################################
+sub do_script_action { #{{{2
+    my ($self) = @_;
+
+    my $action = $self->script_action;
+    my $args = $self->action_args;
+    my $rc;
+
+    # assume that the action can be performed at this point, then check for finished afterwards,
+    # so we can load the next action once this one is finished.
+    if ($action =~ /redo/) {
+        $rc = $self->frame->canvas->undo_or_redo(1);
+    }
+    elsif ($action =~ /undo/) {
+        $rc = $self->frame->canvas->undo_or_redo(0);
+    }
+    elsif ($action eq 'delay') {
+
+        # record new delay so we can restart after a message
+        $self->script_delay($args);
+        $rc = $self->script_timer->Start($args, wxTIMER_CONTINUOUS);
+    }
+    elsif ($action eq 'branch') {
+        $rc = $self->frame->canvas->change_to_branch($args,0);
+    }
+    elsif ($action eq 'message') {
+        $rc = $self->frame->display_message($args);
+    }
+    else {
+        $log->logconfess("bad action $action");
+    }
+
+    unless ($rc) {
+        $log->warn("failed to do script action $action");
+        $self->stop_script;
+        return;
+    }
+
+    # have we finished now? check now so we can load the next action before the next timed event.
+    my $finished;
+    if ($action eq 'redo') {
+        $args-- if defined $args;
+        $finished = scalar @{ $self->scene->redo_stack } == 0 || (defined $args && $args == 0);
+    }
+    elsif ($action eq 'undo') {
+        $args-- if defined $args;
+        $finished = scalar @{ $self->scene->undo_stack } == 0 || (defined $args && $args == 0);
+    }
+    elsif ($action =~ /til_branch/) {
+
+        # we're finished when the top item on the redo stack is a branch; note that we don't want to
+        # end (here) when the stack is empty, we want to fail when the next action is attempted.
+        if (scalar @{ $self->scene->redo_stack }) {
+            $finished = (ref $self->scene->redo_stack->[-1]) eq 'HASH';
+        }
+    }
+    elsif ($action =~ /delay|branch|message/) {
+        $finished = 1;
+    }
+
+    # update this in case we changed it
+    $self->action_args($args);
+
+    if ($finished) {
+        $self->get_next_script_action;
+    }
+
+    return;
+}
+
+################################################################################
+sub stop_script { #{{{2
+    my ($self) = @_;
+
+    # script finished, so display controls and start auto-save timer
+    $self->script_timer->Stop;
+#    $self->frame->toggle_tool_panel;
+#    $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
+
+    return;
 }
 
 ################################################################################
@@ -169,8 +304,10 @@ sub OnInit { # {{{2
 sub OnExit { # {{{2
     my( $self ) = shift;
 
-    $self->scene->save;
-    $self->config->save;
+    if ($self->config->autosave_on_exit) {
+        $self->scene->save;
+        $self->config->save;
+    }
 
     return 1;
 }

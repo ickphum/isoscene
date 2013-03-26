@@ -1654,38 +1654,46 @@ sub add_undo_action { #{{{1
     # Are there any items on the redo stack?
     if (my $new_branch_node = pop @{ $self->scene->redo_stack }) {
 
-        $log->info("create branch then add new action");
-        
-        # the thing called new_branch_node may already be a branch node, or it may be a simple action.
-        # If the latter, make it into a branch node first, then we can add the new action generically.
-        if ((ref $new_branch_node) ne 'HASH') {
+        if ((ref $new_branch_node) eq 'HASH' || wxTheApp->config->automatic_branching) {
 
-            # turn this simple item into a branch item pointing to the top item from the redo stack, 
-            # then we can add the new branch.
-            $new_branch_node = {
-                branches => [ $new_branch_node, ],
-                current_branch => 0,
+            $log->info("create branch then add new action");
+            
+            # the thing called new_branch_node may already be a branch node, or it may be a simple action.
+            # If the latter, make it into a branch node first, then we can add the new action generically.
+            if ((ref $new_branch_node) ne 'HASH') {
+
+                # turn this simple item into a branch item pointing to the top item from the redo stack, 
+                # then we can add the new branch.
+                $new_branch_node = {
+                    branches => [ $new_branch_node, ],
+                    current_branch => 0,
+                };
+            }
+
+            # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
+            # from the branch node.
+            my $current_branch = $new_branch_node->{current_branch};
+            $new_branch_node->{branches}->[ $current_branch ] = {
+                last_current_at => scalar localtime,
+                actions => [ @{ $self->scene->redo_stack }, $new_branch_node->{branches}->[$current_branch],  ],
             };
+
+            # add the new branch (containing the new undo action) and make it current
+            push @{ $new_branch_node->{branches} }, $new_action;
+            $new_branch_node->{current_branch} = $#{ $new_branch_node->{branches} };
+
+            push @{ $self->scene->undo_stack }, $new_branch_node;
+        }
+        else {
+
+            # we're not doing automatic branching and the top redo item wasn't a branch node
+            # so we're discarding it. Just add the undo action.
+            push @{ $self->scene->undo_stack }, $new_action;
         }
 
-        # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
-        # from the branch node.
-        my $current_branch = $new_branch_node->{current_branch};
-        $new_branch_node->{branches}->[ $current_branch ] = {
-            last_current_at => scalar localtime,
-            actions => [ @{ $self->scene->redo_stack }, $new_branch_node->{branches}->[$current_branch],  ],
-        };
-
-        # add the new branch (containing the new undo action) and make it current
-        push @{ $new_branch_node->{branches} }, $new_action;
-        $new_branch_node->{current_branch} = $#{ $new_branch_node->{branches} };
-
-        push @{ $self->scene->undo_stack }, $new_branch_node;
-
-        # clear the redo stack now we've saved it to the branch
+        # clear the redo stack now we've saved it to the branch (if we're branching)
         $self->scene->redo_stack([]);
 
-        $log->info("new_branch_node: " . Dumper($new_branch_node, $self->scene->undo_stack));
     }
     else {
         push @{ $self->scene->undo_stack }, $new_action;
@@ -1697,6 +1705,7 @@ sub add_undo_action { #{{{1
 }
 
 ################################################################################
+# returns true if the action was possible.
 sub undo_or_redo { #{{{1
     my ($self, $redo, $no_refresh) = @_;
 
@@ -1743,7 +1752,7 @@ sub undo_or_redo { #{{{1
         $self->Refresh;
     }
 
-    return;
+    return 1;
 }
 
 ################################################################################
@@ -1751,18 +1760,17 @@ sub change_to_branch { #{{{1
     my ($self, $branch_index, $redo_flag) = @_;
     $log->info("change_to_branch branch_index $branch_index, redo_flag $redo_flag");
 
-    # if the undo stack is not at the reference position, undo back to there
-    # before we change branch.
-    $self->undo_to_position($self->frame->branch_choice_position);
-
     # make the selected branch current
+
+    my $branch_node = pop @{ $self->scene->redo_stack };
+    return 0 unless (ref $branch_node) eq 'HASH';
+    return 0 unless $branch_index <= $#{ $branch_node->{branches} };
 
     # 1. Turn existing current branch into list of redo_stack + current action
     # data for the current branch is an action; turn this into a list of actions from the redo stack plus the existing current action
     # from the branch node.
-    my $branch_node = pop @{ $self->scene->redo_stack };
     my $current_branch = $branch_node->{current_branch};
-    $log->info("current_branch $current_branch, branch_node: " . Dumper($branch_node));
+    $log->info("current_branch $current_branch");
     $branch_node->{branches}->[ $current_branch ] = {
         last_current_at => scalar localtime,
         actions => [ @{ $self->scene->redo_stack }, $branch_node->{branches}->[$current_branch],  ],
@@ -1786,7 +1794,7 @@ sub change_to_branch { #{{{1
         $self->redo_all_actions;
     }
 
-    return;
+    return 1;
 }
 
 ################################################################################
@@ -1839,10 +1847,19 @@ sub set_undo_redo_button_states { #{{{1
 
     IsoApp::set_button_bitmap($self->frame->misc_btn->{'redo'}, $redo_button_bitmap);
     $self->frame->misc_btn->{'redo'}->SetToolTip($redo_tooltip);
+    $self->frame->misc_btn->{'redo'}->Enable($top_redo_index >= 0);
 
-    $self->frame->misc_btn->{'undo'}->SetToolTip(scalar @{ $self->scene->undo_stack } . " actions.");
+    my $undo_count = scalar @{ $self->scene->undo_stack };
+    $self->frame->misc_btn->{'undo'}->SetToolTip("$undo_count actions.");
+    $self->frame->misc_btn->{'undo'}->Enable($undo_count);
 
-    return;
+    # if we've hit either end of the undo/redo sequence, stop the timer; if we've
+    # come from the button, we're aren't going to get the button up event which usually does this.
+    unless ($self->frame->misc_btn->{'redo'}->IsEnabled && $self->frame->misc_btn->{'undo'}->IsEnabled) {
+        $self->frame->undo_timer->Stop;
+    }
+
+    return 1;
 }
 
 ################################################################################

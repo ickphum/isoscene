@@ -26,7 +26,7 @@ use IsoExportOptions;
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    tool_panel canvas branch_choice_pnl
+    tool_panel canvas branch_choice_pnl message_pnl
 
     mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -251,7 +251,7 @@ sub new { #{{{1
 
                 # if we're on a branch, display the choose_branch button
                 if ((ref $self->canvas->scene->redo_stack->[-1]) eq 'HASH') {
-                    unshift @{ $choices }, 'choose_branch';
+                    push @{ $choices }, 'choose_branch';
                 }
 
                 $self->show_button_popup($choices, \&do_undo_redo_tool, $button->GetScreenPosition);
@@ -293,6 +293,7 @@ sub new { #{{{1
 
     $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
 
+    # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
     $canvas_side_sizer->Add($self->branch_choice_pnl, 0, wxEXPAND );
     $self->branch_choice_pnl->Hide;
@@ -300,6 +301,24 @@ sub new { #{{{1
     Wx::Event::EVT_CHOICE($self, $self->branch_choice_pnl->FindWindow('branch_chc'), \&change_branch_choice);
     Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), sub { $_[0]->finish_branch_choice(1); } );
     Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), sub { $_[0]->finish_branch_choice(0); } );
+
+    # message panel
+    $self->message_pnl( $app->xrc->LoadPanel($self, 'message_pane') );
+    $canvas_side_sizer->Add($self->message_pnl, 0, wxEXPAND );
+    $self->message_pnl->Hide;
+
+    Wx::Event::EVT_BUTTON($self, $self->message_pnl->FindWindow('continue_btn'), 
+        sub {
+            my ($frame) = @_;
+            
+            $frame->message_pnl->Hide;
+            $frame->Layout;
+            my $app = wxTheApp;
+            if (my $script_timer = $app->script_timer) {
+                $script_timer->Start($app->script_delay, wxTIMER_CONTINUOUS);
+            }
+        }
+    );
 
     $sizer->Add($canvas_side_sizer, 1, wxEXPAND);
 
@@ -412,6 +431,7 @@ sub show_menu { #{{{1
             $app->scene->save;
             $app->scene( IsoScene->new() );
             $self->canvas->scene($app->scene);
+            $self->canvas->set_undo_redo_button_states;
             $app->set_frame_title;
             $self->Refresh;
         }
@@ -496,9 +516,12 @@ sub show_menu { #{{{1
         elsif ($string eq $config_options) {
             my $options = [ qw(
                 previous_scene_file 
+                autosave_on_exit
                 autosave_period_seconds 
                 undo_wait_milliseconds
                 undo_repeat_milliseconds
+                automatic_branching
+                script_delay_milliseconds
                 shade_change
                 default_scene_file
                 default_scene_scale
@@ -792,6 +815,24 @@ sub update_scene_color { #{{{1
 }
 
 ################################################################################
+# display a message, possibly temporarily
+sub display_message { #{{{1
+    my ($self, $message) = @_;
+
+    my $message_lbl = $self->message_pnl->FindWindow('message_lbl');
+    $message_lbl->SetLabel($message);
+    $self->message_pnl->Show;
+    $self->Layout;
+
+    # stop the script if it's running; hiding the message will restart it
+    if (my $timer = wxTheApp->script_timer) {
+        $timer->Stop;
+    }
+
+    return 1;
+}
+
+################################################################################
 # toggle the appearance of the tool panel
 sub toggle_tool_panel { #{{{1
     my ($self) = @_;
@@ -799,7 +840,6 @@ sub toggle_tool_panel { #{{{1
     my $hide = $self->tool_panel->IsShown;
 
     my ($width, $height) = $self->tool_panel->GetSizeWH;
-    $log->info("tp width $width");
 
     # scroll the canvas so the scene remains in the same screen position after 
     # the canvas widens/narrows depending on the state of the tool panel.
@@ -808,6 +848,7 @@ sub toggle_tool_panel { #{{{1
     $self->canvas->tile_cache(0);
 
     $self->tool_panel->Show(! $hide);
+    $self->Layout;
 
     return;
 }
@@ -1092,11 +1133,55 @@ sub do_undo_redo_tool { #{{{1
 
     }
     elsif ($button_name eq 'undo_to_branch') {
+        if (@{ $frame->canvas->scene->undo_stack }) {
+            while (1) {
+                last unless $frame->canvas->undo_or_redo(0,1);
+                last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
+            }
+            $frame->canvas->set_undo_redo_button_states;
+            $frame->canvas->Refresh;
+        }
+        else {
+            $frame->display_message("There are no actions to undo.");
+        }
     }
     elsif ($button_name eq 'redo_to_branch') {
+        if (@{ $frame->canvas->scene->redo_stack }) {
+            while (1) {
+                last unless $frame->canvas->undo_or_redo(1,1);
+                last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
+            }
+            $frame->canvas->set_undo_redo_button_states;
+            $frame->canvas->Refresh;
+        }
+        else {
+            $frame->display_message("There are no actions to redo.");
+        }
     }
     elsif ($button_name eq 'new_branch') {
+        if (@{ $frame->canvas->scene->redo_stack }) {
+
+            if ((ref $frame->canvas->scene->redo_stack->[-1]) ne 'HASH') {
+
+                # turn this normal node into a branch node, so that if we do a new action at this
+                # point, the old redo stack will be preserved as a branch.
+                my $action = pop @{ $frame->canvas->scene->redo_stack };
+                my $branch_node = {
+                    current_branch => 0,
+                    branches => [ $action ],
+                };
+                push @{ $frame->canvas->scene->redo_stack }, $branch_node;
+
+            }
+            else {
+                $frame->display_message("There is already a branch at this point.");
+            }
+        }
+        else {
+            $frame->display_message("You must undo some actions before creating a branch.");
+        }
     }
+
 
     return;
 }
@@ -1106,6 +1191,11 @@ sub change_branch_choice { #{{{1
     my ($self, $event) = @_;
 
     $log->info("change_branch_choice " . $event->GetSelection);
+
+    # if the undo stack is not at the reference position, undo back to there
+    # before we change branch.
+    $self->canvas->undo_to_position($self->branch_choice_position);
+
     $self->canvas->change_to_branch($event->GetSelection, 1);
 
     return;
@@ -1121,6 +1211,11 @@ sub finish_branch_choice { #{{{1
     # change back to original branch but don't redo, which will leave the undo/redo
     # stacks where they were.
     unless ($confirm) {
+
+        # if the undo stack is not at the reference position, undo back to there
+        # before we change branch.
+        $self->canvas->undo_to_position($self->branch_choice_position);
+
         $self->canvas->change_to_branch($self->original_branch, 0);
     }
 

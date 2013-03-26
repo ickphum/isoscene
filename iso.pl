@@ -75,6 +75,7 @@ unless(caller){
         file=s
         quiet
         geometry=s
+        script=s
     );
 
     GetOptions( \%options, @options ) or pod2usage(2);

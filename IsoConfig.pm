@@ -13,9 +13,12 @@ my $CONFIG_FILENAME = 'iso.yml';
 
 __PACKAGE__->mk_accessors( qw(
     previous_scene_file
+    autosave_on_exit
     autosave_period_seconds
+    script_delay_milliseconds
     undo_wait_milliseconds
     undo_repeat_milliseconds
+    automatic_branching
     shade_change
     relative_shades
     default_scene_file
@@ -33,9 +36,12 @@ sub new { # {{{1
     my( $class, $arg ) = @_;
 
     my $default_config = {
+        autosave_on_exit => 1,
         autosave_period_seconds => 60,
+        script_delay_milliseconds => 50,
         undo_wait_milliseconds => 200,
         undo_repeat_milliseconds => 20,
+        automatic_branching => 0,
         shade_change => 30,
         relative_shades => "L,1,T,0,R,2",
         default_scene_file => 'Start',
