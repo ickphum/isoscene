@@ -90,7 +90,7 @@ sub new { # {{{1
 
 
         if (-r $file && -f $file) {
-            $self->script_lines([ read_file($file) ]);
+            $self->script_lines([ grep { /^[^#]/ } read_file($file) ]);
 #            $self->script_pos(0);
             $self->script_timer(Wx::Timer->new($self));
             Wx::Event::EVT_TIMER($self, $self->script_timer, \&do_script_action);
@@ -115,13 +115,11 @@ sub new { # {{{1
 }
 
 ################################################################################
-sub get_next_script_action { #{{{2
+sub get_next_script_action { #{{{1
     my ($self) = @_;
 
-    my $running = 1;
-
     if (my $line = shift @{ $self->script_lines }) {
-        if ($line =~ /\A(redo\w*|undo\w*|delay|branch|message)\s?(\S.*)?/) {
+        if ($line =~ /\A(redo\w*|undo\w*|delay|branch|message|exit)\s?(\S.*)?/) {
             my ($action, $args) = ($1,$2);
 
             $log->info("new action $action, args " . ($args || ''));
@@ -134,14 +132,13 @@ sub get_next_script_action { #{{{2
     }
     else {
         $self->stop_script;
-        $running = 0;
     }
 
-    return $running;
+    return;
 }
 
 ################################################################################
-sub do_script_action { #{{{2
+sub do_script_action { #{{{1
     my ($self) = @_;
 
     my $action = $self->script_action;
@@ -167,6 +164,10 @@ sub do_script_action { #{{{2
     }
     elsif ($action eq 'message') {
         $rc = $self->frame->display_message($args);
+    }
+    elsif ($action eq 'exit') {
+        $self->frame->Destroy;
+        $rc = 1;
     }
     else {
         $log->logconfess("bad action $action");
@@ -211,7 +212,7 @@ sub do_script_action { #{{{2
 }
 
 ################################################################################
-sub stop_script { #{{{2
+sub stop_script { #{{{1
     my ($self) = @_;
 
     # script finished, so display controls and start auto-save timer
@@ -225,7 +226,7 @@ sub stop_script { #{{{2
 ################################################################################
 # Tricky to find a single point to do this (needed at load, open & save as),
 # so just make it easy to call.
-sub set_frame_title { #{{{2
+sub set_frame_title { #{{{1
     my ($self) = @_;
 
     my $scene_file = $self->scene->filename;
@@ -254,7 +255,7 @@ sub set_button_bitmap { #{{{1
 }
 
 ################################################################################
-sub save_dialog_settings { #{{{2
+sub save_dialog_settings { #{{{1
     my ($self, $setting_group, $dialog_control) = @_;
 
     my $scene = $self->scene;
@@ -271,7 +272,7 @@ sub save_dialog_settings { #{{{2
 }
 
 ################################################################################
-sub load_dialog_settings { #{{{2
+sub load_dialog_settings { #{{{1
     my ($self, $setting_group, $dialog_control) = @_;
 
     my $scene = $self->scene;
@@ -288,7 +289,7 @@ sub load_dialog_settings { #{{{2
 
 ################################################################################
 
-sub OnInit { # {{{2
+sub OnInit { # {{{1
     my( $self ) = shift;
 
     Wx::InitAllImageHandlers();
@@ -301,7 +302,7 @@ sub OnInit { # {{{2
 
 ################################################################################
 
-sub OnExit { # {{{2
+sub OnExit { # {{{1
     my( $self ) = shift;
 
     if ($self->config->autosave_on_exit) {

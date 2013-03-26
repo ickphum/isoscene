@@ -2,7 +2,6 @@
 <resource version="2.3.0.1" xmlns="http://www.wxwidgets.org/wxxrc">
     <object class="wxPanel" name="message_pane">
         <style>wxTAB_TRAVERSAL</style>
-        <size>400,300</size>
         <title>message__pane</title>
         <centered>1</centered>
         <object class="wxBoxSizer">

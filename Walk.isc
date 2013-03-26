@@ -1,0 +1,2810 @@
+--- !!perl/hash:IsoScene
+background_rgb: '#AAAAAA'
+bg_line_rgb: '#B3B3B3'
+clipboard:
+- name: Walk_20130326_214217
+  tiles:
+  - brush_index: 0
+    facing: R
+    left: -4
+    right: -3
+    shape: TR
+    top: 1
+  - brush_index: 1
+    facing: R
+    left: 3
+    right: 3
+    shape: R
+    top: 0
+  - brush_index: 4
+    facing: R
+    left: -1
+    right: -2
+    shape: L
+    top: -1
+  - brush_index: 2
+    facing: R
+    left: 1
+    right: 0
+    shape: L
+    top: -1
+  - brush_index: 4
+    facing: R
+    left: -3
+    right: -4
+    shape: L
+    top: -1
+  - brush_index: 3
+    facing: R
+    left: -3
+    right: -1
+    shape: R
+    top: 2
+  - brush_index: 4
+    facing: R
+    left: -1
+    right: -4
+    shape: L
+    top: -3
+  - brush_index: 3
+    facing: R
+    left: 0
+    right: 0
+    shape: R
+    top: 0
+  - brush_index: 1
+    facing: R
+    left: 1
+    right: 1
+    shape: R
+    top: 0
+  - brush_index: 0
+    facing: L
+    left: -2
+    right: -4
+    shape: TL
+    top: -2
+  - brush_index: 4
+    facing: R
+    left: 0
+    right: -3
+    shape: L
+    top: -3
+  - brush_index: 1
+    facing: R
+    left: 2
+    right: 2
+    shape: R
+    top: 0
+  - brush_index: 4
+    facing: R
+    left: 0
+    right: -2
+    shape: L
+    top: -2
+  - brush_index: 2
+    facing: R
+    left: 3
+    right: 2
+    shape: L
+    top: -1
+  - brush_index: 3
+    facing: R
+    left: -1
+    right: -1
+    shape: R
+    top: 0
+  - brush_index: 0
+    facing: L
+    left: -3
+    right: -2
+    shape: T
+    top: 1
+  - brush_index: 4
+    facing: R
+    left: -1
+    right: -3
+    shape: L
+    top: -2
+  - brush_index: 3
+    facing: R
+    left: -2
+    right: -1
+    shape: R
+    top: 1
+  - brush_index: 3
+    facing: R
+    left: -1
+    right: 0
+    shape: R
+    top: 1
+  - brush_index: 0
+    facing: L
+    left: -1
+    right: -2
+    shape: T
+    top: -1
+  - brush_index: 2
+    facing: R
+    left: 2
+    right: 1
+    shape: L
+    top: -1
+  - brush_index: 0
+    facing: L
+    left: -3
+    right: -4
+    shape: T
+    top: -1
+  - brush_index: 3
+    facing: R
+    left: -3
+    right: -3
+    shape: R
+    top: 0
+  - brush_index: 4
+    facing: R
+    left: 0
+    right: -1
+    shape: L
+    top: -1
+  - brush_index: 3
+    facing: R
+    left: -2
+    right: 0
+    shape: R
+    top: 2
+  - brush_index: 0
+    facing: L
+    left: -2
+    right: -2
+    shape: T
+    top: 0
+  - brush_index: 0
+    facing: L
+    left: -1
+    right: -3
+    shape: T
+    top: -2
+  - brush_index: 0
+    facing: L
+    left: -1
+    right: -4
+    shape: T
+    top: -3
+filename: Walk
+grid: {}
+left_rgb: '#7C2200'
+origin_x: 35.25
+origin_y: 278.5
+palette:
+- '#72BB61'
+- '#AC7E3D'
+- '#CA9C5B'
+- '#367F25'
+- '#549D43'
+- '#B4C3B0'
+- '#D2E1CE'
+- '#9D6926'
+- '#E12200'
+- '#C30400'
+- '#FF401A'
+- '#FFA25F'
+- '#9A4000'
+- '#7C2200'
+- '#5E0400'
+- '#DA8040'
+redo_stack:
+- - paint
+  - - brush_index: 15
+      facing: L
+      left: -11
+      right: 29
+      shape: T
+      top: 40
+    - brush_index: 15
+      facing: L
+      left: -11
+      right: 28
+      shape: T
+      top: 39
+    - brush_index: 15
+      facing: R
+      left: -15
+      right: 28
+      shape: TR
+      top: 43
+    - brush_index: 15
+      facing: L
+      left: -11
+      right: 27
+      shape: T
+      top: 38
+    - brush_index: 15
+      facing: L
+      left: -12
+      right: 30
+      shape: T
+      top: 42
+    - brush_index: 15
+      facing: L
+      left: -12
+      right: 29
+      shape: T
+      top: 41
+    - brush_index: 15
+      facing: L
+      left: -12
+      right: 27
+      shape: TL
+      top: 39
+    - brush_index: 15
+      facing: L
+      left: -11
+      right: 30
+      shape: T
+      top: 41
+    - brush_index: 15
+      facing: L
+      left: -13
+      right: 29
+      shape: TL
+      top: 42
+    - brush_index: 15
+      facing: R
+      left: -15
+      right: 30
+      shape: TR
+      top: 45
+- - paint
+  - - brush_index: 13
+      facing: R
+      left: -14
+      right: 29
+      shape: L
+      top: 43
+- - paint
+  - - brush_index: 12
+      facing: L
+      left: -14
+      right: 29
+      shape: T
+      top: 43
+- - paint
+  - - brush_index: 14
+      facing: R
+      left: -14
+      right: 30
+      shape: R
+      top: 44
+- - paint
+  - - brush_index: 14
+      facing: R
+      left: -14
+      right: 28
+      shape: R
+      top: 42
+- - paint
+  - - brush_index: 14
+      facing: R
+      left: -13
+      right: 28
+      shape: R
+      top: 41
+- - paint
+  - - brush_index: 13
+      facing: R
+      left: -13
+      right: 27
+      shape: L
+      top: 40
+- - paint
+  - - brush_index: 12
+      facing: L
+      left: -14
+      right: 27
+      shape: T
+      top: 41
+- - paint
+  - - brush_index: 12
+      facing: L
+      left: -13
+      right: 27
+      shape: T
+      top: 40
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -14
+      right: 24
+      shape: R
+      top: 38
+    - brush_index: 5
+      facing: R
+      left: -14
+      right: 25
+      shape: R
+      top: 39
+    - brush_index: 5
+      facing: R
+      left: -16
+      right: 23
+      shape: TR
+      top: 39
+    - brush_index: 5
+      facing: R
+      left: -15
+      right: 24
+      shape: R
+      top: 39
+    - brush_index: 5
+      facing: R
+      left: -15
+      right: 25
+      shape: R
+      top: 40
+    - brush_index: 5
+      facing: R
+      left: -16
+      right: 22
+      shape: TR
+      top: 38
+    - brush_index: 5
+      facing: R
+      left: -13
+      right: 26
+      shape: R
+      top: 39
+    - brush_index: 5
+      facing: R
+      left: -15
+      right: 23
+      shape: R
+      top: 38
+    - brush_index: 5
+      facing: R
+      left: -14
+      right: 26
+      shape: R
+      top: 40
+    - brush_index: 5
+      facing: R
+      left: -16
+      right: 24
+      shape: TR
+      top: 40
+    - brush_index: 5
+      facing: R
+      left: -13
+      right: 25
+      shape: R
+      top: 38
+    - brush_index: 5
+      facing: R
+      left: -15
+      right: 26
+      shape: R
+      top: 41
+    - brush_index: 5
+      facing: R
+      left: -16
+      right: 25
+      shape: TR
+      top: 41
+    - brush_index: 5
+      facing: R
+      left: -12
+      right: 26
+      shape: R
+      top: 38
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -17
+      right: 26
+      shape: L
+      top: 43
+    - brush_index: 6
+      facing: R
+      left: -18
+      right: 26
+      shape: L
+      top: 44
+    - brush_index: 6
+      facing: R
+      left: -17
+      right: 27
+      shape: L
+      top: 44
+    - brush_index: 6
+      facing: R
+      left: -16
+      right: 28
+      shape: L
+      top: 44
+    - brush_index: 6
+      facing: R
+      left: -16
+      right: 27
+      shape: L
+      top: 43
+    - brush_index: 6
+      facing: L
+      left: -16
+      right: 26
+      shape: TL
+      top: 42
+    - brush_index: 6
+      facing: R
+      left: -16
+      right: 29
+      shape: L
+      top: 45
+    - brush_index: 6
+      facing: R
+      left: -16
+      right: 26
+      shape: L
+      top: 42
+    - brush_index: 6
+      facing: R
+      left: -17
+      right: 28
+      shape: L
+      top: 45
+    - brush_index: 6
+      facing: R
+      left: -18
+      right: 27
+      shape: L
+      top: 45
+    - brush_index: 6
+      facing: R
+      left: -19
+      right: 26
+      shape: L
+      top: 45
+    - brush_index: 6
+      facing: L
+      left: -17
+      right: 26
+      shape: TL
+      top: 43
+    - brush_index: 6
+      facing: L
+      left: -18
+      right: 26
+      shape: TL
+      top: 44
+    - brush_index: 6
+      facing: L
+      left: -19
+      right: 26
+      shape: TL
+      top: 45
+- - erase_current
+  - - &1
+      brush_index: 5
+      facing: R
+      left: -15
+      right: 29
+      shape: R
+      top: 44
+    - &2
+      brush_index: 5
+      facing: R
+      left: -15
+      right: 28
+      shape: R
+      top: 43
+    - &3
+      brush_index: 5
+      facing: R
+      left: -12
+      right: 30
+      shape: R
+      top: 42
+    - &4
+      brush_index: 5
+      facing: R
+      left: -18
+      right: 26
+      shape: R
+      top: 44
+    - &5
+      brush_index: 5
+      facing: R
+      left: -16
+      right: 28
+      shape: R
+      top: 44
+    - &6
+      brush_index: 5
+      facing: R
+      left: -16
+      right: 27
+      shape: R
+      top: 43
+    - &7
+      brush_index: 5
+      facing: R
+      left: -17
+      right: 28
+      shape: R
+      top: 45
+    - &8
+      brush_index: 5
+      facing: R
+      left: -19
+      right: 26
+      shape: R
+      top: 45
+    - &9
+      brush_index: 5
+      facing: R
+      left: -15
+      right: 30
+      shape: R
+      top: 45
+    - &10
+      brush_index: 5
+      facing: R
+      left: -17
+      right: 26
+      shape: R
+      top: 43
+    - &11
+      brush_index: 5
+      facing: R
+      left: -14
+      right: 29
+      shape: R
+      top: 43
+    - &12
+      brush_index: 5
+      facing: R
+      left: -15
+      right: 27
+      shape: R
+      top: 42
+    - &13
+      brush_index: 5
+      facing: R
+      left: -14
+      right: 28
+      shape: R
+      top: 42
+    - &14
+      brush_index: 5
+      facing: R
+      left: -17
+      right: 27
+      shape: R
+      top: 44
+    - &15
+      brush_index: 5
+      facing: R
+      left: -13
+      right: 30
+      shape: R
+      top: 43
+    - &16
+      brush_index: 5
+      facing: R
+      left: -14
+      right: 30
+      shape: R
+      top: 44
+    - &17
+      brush_index: 5
+      facing: R
+      left: -16
+      right: 29
+      shape: R
+      top: 45
+    - &18
+      brush_index: 5
+      facing: R
+      left: -16
+      right: 26
+      shape: R
+      top: 42
+    - &19
+      brush_index: 5
+      facing: R
+      left: -18
+      right: 27
+      shape: R
+      top: 45
+- - erase_current
+  - - &20
+      brush_index: 5
+      facing: R
+      left: -13
+      right: 29
+      shape: R
+      top: 42
+- branches:
+  - - erase_current
+    - - &21
+        brush_index: 6
+        facing: R
+        left: -14
+        right: 27
+        shape: L
+        top: 41
+      - &22
+        brush_index: 6
+        facing: R
+        left: -14
+        right: 24
+        shape: L
+        top: 38
+      - &23
+        brush_index: 6
+        facing: R
+        left: -14
+        right: 25
+        shape: L
+        top: 39
+      - &24
+        brush_index: 6
+        facing: R
+        left: -15
+        right: 24
+        shape: L
+        top: 39
+      - &25
+        brush_index: 6
+        facing: R
+        left: -15
+        right: 23
+        shape: L
+        top: 38
+      - &26
+        brush_index: 6
+        facing: R
+        left: -14
+        right: 26
+        shape: L
+        top: 40
+      - &27
+        brush_index: 6
+        facing: R
+        left: -12
+        right: 29
+        shape: L
+        top: 41
+      - &28
+        brush_index: 6
+        facing: R
+        left: -16
+        right: 24
+        shape: L
+        top: 40
+      - &29
+        brush_index: 6
+        facing: R
+        left: -13
+        right: 27
+        shape: L
+        top: 40
+      - &30
+        brush_index: 6
+        facing: R
+        left: -16
+        right: 23
+        shape: L
+        top: 39
+      - &31
+        brush_index: 6
+        facing: R
+        left: -15
+        right: 25
+        shape: L
+        top: 40
+      - &32
+        brush_index: 6
+        facing: R
+        left: -16
+        right: 22
+        shape: L
+        top: 38
+      - &33
+        brush_index: 7
+        facing: R
+        left: -13
+        right: 26
+        shape: L
+        top: 39
+      - &34
+        brush_index: 7
+        facing: R
+        left: -12
+        right: 27
+        shape: L
+        top: 39
+      - &35
+        brush_index: 6
+        facing: R
+        left: -13
+        right: 25
+        shape: L
+        top: 38
+      - &36
+        brush_index: 6
+        facing: R
+        left: -13
+        right: 28
+        shape: L
+        top: 41
+      - &37
+        brush_index: 6
+        facing: R
+        left: -12
+        right: 28
+        shape: L
+        top: 40
+      - &38
+        brush_index: 6
+        facing: R
+        left: -15
+        right: 26
+        shape: L
+        top: 41
+      - &39
+        brush_index: 6
+        facing: R
+        left: -12
+        right: 26
+        shape: L
+        top: 38
+      - &40
+        brush_index: 6
+        facing: R
+        left: -16
+        right: 25
+        shape: L
+        top: 41
+  - actions:
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -38
+          right: 11
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -37
+          right: 11
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -37
+          right: 12
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -36
+          right: 12
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -35
+          right: 12
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -35
+          right: 13
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -34
+          right: 13
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -34
+          right: 14
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -33
+          right: 14
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -33
+          right: 15
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -32
+          right: 15
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -32
+          right: 16
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -32
+          right: 17
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -31
+          right: 17
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -31
+          right: 18
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -30
+          right: 18
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -30
+          right: 19
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -30
+          right: 20
+          shape: T
+          top: 50
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -29
+          right: 20
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -29
+          right: 21
+          shape: T
+          top: 50
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -29
+          right: 22
+          shape: T
+          top: 51
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -28
+          right: 22
+          shape: T
+          top: 50
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -28
+          right: 23
+          shape: T
+          top: 51
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -28
+          right: 24
+          shape: T
+          top: 52
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -28
+          right: 25
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -27
+          right: 25
+          shape: T
+          top: 52
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -27
+          right: 26
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -26
+          right: 27
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -26
+          right: 28
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -25
+          right: 28
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -25
+          right: 29
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -24
+          right: 29
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -24
+          right: 30
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -23
+          right: 31
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -23
+          right: 32
+          shape: T
+          top: 55
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -22
+          right: 32
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -22
+          right: 33
+          shape: T
+          top: 55
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -21
+          right: 33
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -20
+          right: 33
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -20
+          right: 34
+          shape: T
+          top: 54
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -19
+          right: 34
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -18
+          right: 34
+          shape: T
+          top: 52
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -18
+          right: 35
+          shape: T
+          top: 53
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -17
+          right: 35
+          shape: T
+          top: 52
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -16
+          right: 35
+          shape: T
+          top: 51
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -15
+          right: 35
+          shape: T
+          top: 50
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -14
+          right: 35
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -14
+          right: 36
+          shape: T
+          top: 50
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -13
+          right: 36
+          shape: T
+          top: 49
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -13
+          right: 35
+          shape: T
+          top: 48
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -12
+          right: 35
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -11
+          right: 35
+          shape: T
+          top: 46
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -11
+          right: 36
+          shape: T
+          top: 47
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -10
+          right: 36
+          shape: T
+          top: 46
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -10
+          right: 35
+          shape: T
+          top: 45
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -9
+          right: 35
+          shape: T
+          top: 44
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 35
+          shape: T
+          top: 43
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 34
+          shape: T
+          top: 42
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 33
+          shape: T
+          top: 41
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 32
+          shape: T
+          top: 40
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 31
+          shape: T
+          top: 39
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 30
+          shape: T
+          top: 38
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -9
+          right: 29
+          shape: T
+          top: 38
+    - - paint
+      - - brush_index: 0
+          facing: L
+          left: -8
+          right: 29
+          shape: T
+          top: 37
+    last_current_at: !!perl/array:Time::Piece
+    - 4
+    - 40
+    - 22
+    - 26
+    - 2
+    - 113
+    - 2
+    - 84
+    - 1
+    - 1364298004
+    - 1
+  current_branch: 0
+- - paint
+  - - brush_index: 10
+      facing: L
+      left: -19
+      right: 24
+      shape: T
+      top: 43
+    - brush_index: 10
+      facing: L
+      left: -18
+      right: 24
+      shape: T
+      top: 42
+    - brush_index: 10
+      facing: L
+      left: -20
+      right: 24
+      shape: T
+      top: 44
+    - brush_index: 10
+      facing: L
+      left: -17
+      right: 24
+      shape: T
+      top: 41
+    - brush_index: 10
+      facing: L
+      left: -21
+      right: 24
+      shape: T
+      top: 45
+- - paint
+  - - brush_index: 10
+      facing: L
+      left: -18
+      right: 22
+      shape: T
+      top: 40
+    - brush_index: 10
+      facing: L
+      left: -20
+      right: 22
+      shape: T
+      top: 42
+    - brush_index: 10
+      facing: L
+      left: -19
+      right: 22
+      shape: T
+      top: 41
+    - brush_index: 10
+      facing: L
+      left: -21
+      right: 22
+      shape: T
+      top: 43
+    - brush_index: 10
+      facing: L
+      left: -22
+      right: 22
+      shape: T
+      top: 44
+- - paint
+  - - brush_index: 10
+      facing: L
+      left: -18
+      right: 20
+      shape: TL
+      top: 38
+    - brush_index: 10
+      facing: L
+      left: -20
+      right: 20
+      shape: T
+      top: 40
+    - brush_index: 10
+      facing: L
+      left: -21
+      right: 20
+      shape: T
+      top: 41
+    - brush_index: 10
+      facing: L
+      left: -22
+      right: 20
+      shape: T
+      top: 42
+    - brush_index: 10
+      facing: L
+      left: -19
+      right: 20
+      shape: T
+      top: 39
+    - brush_index: 10
+      facing: L
+      left: -17
+      right: 20
+      shape: TL
+      top: 37
+    - brush_index: 10
+      facing: L
+      left: -23
+      right: 20
+      shape: T
+      top: 43
+- - paint
+  - - brush_index: 9
+      facing: R
+      left: -22
+      right: 21
+      shape: R
+      top: 43
+    - brush_index: 9
+      facing: R
+      left: -19
+      right: 21
+      shape: R
+      top: 40
+    - brush_index: 9
+      facing: R
+      left: -21
+      right: 21
+      shape: R
+      top: 42
+    - brush_index: 9
+      facing: R
+      left: -23
+      right: 21
+      shape: R
+      top: 44
+    - brush_index: 9
+      facing: R
+      left: -20
+      right: 21
+      shape: R
+      top: 41
+- - paint
+  - - brush_index: 9
+      facing: R
+      left: -21
+      right: 23
+      shape: R
+      top: 44
+    - brush_index: 9
+      facing: R
+      left: -22
+      right: 23
+      shape: R
+      top: 45
+    - brush_index: 9
+      facing: R
+      left: -18
+      right: 23
+      shape: R
+      top: 41
+    - brush_index: 9
+      facing: R
+      left: -20
+      right: 23
+      shape: R
+      top: 43
+    - brush_index: 9
+      facing: R
+      left: -19
+      right: 23
+      shape: R
+      top: 42
+- - paint
+  - - brush_index: 9
+      facing: R
+      left: -20
+      right: 25
+      shape: R
+      top: 45
+    - brush_index: 9
+      facing: R
+      left: -17
+      right: 25
+      shape: R
+      top: 42
+    - brush_index: 9
+      facing: R
+      left: -19
+      right: 25
+      shape: R
+      top: 44
+    - brush_index: 9
+      facing: R
+      left: -18
+      right: 25
+      shape: R
+      top: 43
+    - brush_index: 9
+      facing: R
+      left: -21
+      right: 25
+      shape: R
+      top: 46
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -19
+      right: 20
+      shape: L
+      top: 39
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -18
+      right: 22
+      shape: L
+      top: 40
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -18
+      right: 20
+      shape: L
+      top: 38
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -18
+      right: 21
+      shape: L
+      top: 39
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -17
+      right: 23
+      shape: L
+      top: 40
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -17
+      right: 24
+      shape: L
+      top: 41
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -17
+      right: 22
+      shape: L
+      top: 39
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -17
+      right: 20
+      shape: L
+      top: 37
+- - paint
+  - - brush_index: 8
+      facing: R
+      left: -17
+      right: 21
+      shape: L
+      top: 38
+- - paint
+  - - *34
+- - paint
+  - - *33
+- - paint
+  - - *37
+- - paint
+  - - *29
+- - paint
+  - - *31
+- - paint
+  - - *26
+- - paint
+  - - *23
+- - paint
+  - - *24
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -13
+      right: 24
+      shape: L
+      top: 37
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -12
+      right: 25
+      shape: L
+      top: 37
+- - paint
+  - - *39
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -16
+      right: 21
+      shape: L
+      top: 37
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -15
+      right: 22
+      shape: L
+      top: 37
+- - paint
+  - - brush_index: 6
+      facing: R
+      left: -14
+      right: 23
+      shape: L
+      top: 37
+- - paint
+  - - *35
+- - paint
+  - - *22
+- - paint
+  - - *25
+- - paint
+  - - *32
+- - paint
+  - - *30
+- - paint
+  - - *28
+- - paint
+  - - *40
+- - paint
+  - - *38
+- - paint
+  - - *21
+- - paint
+  - - *36
+- - paint
+  - - *27
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -20
+      right: 26
+      shape: R
+      top: 46
+- - paint
+  - - *8
+- - paint
+  - - *4
+- - paint
+  - - *20
+- - paint
+  - - *13
+- - paint
+  - - *12
+- - paint
+  - - *18
+- - paint
+  - - *10
+- - paint
+  - - *14
+- - paint
+  - - *6
+- - paint
+  - - *11
+- - paint
+  - - *1
+- - paint
+  - - *2
+- - paint
+  - - *5
+- - paint
+  - - *19
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -19
+      right: 27
+      shape: R
+      top: 46
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -18
+      right: 28
+      shape: R
+      top: 46
+- - paint
+  - - *7
+- - paint
+  - - *17
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -17
+      right: 29
+      shape: R
+      top: 46
+- - paint
+  - - brush_index: 5
+      facing: R
+      left: -16
+      right: 30
+      shape: R
+      top: 46
+- - paint
+  - - *9
+- - paint
+  - - *16
+- - paint
+  - - *15
+- - paint
+  - - *3
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -10
+      right: 28
+      shape: T
+      top: 38
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -9
+      right: 28
+      shape: T
+      top: 37
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -7
+      right: 28
+      shape: T
+      top: 35
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -8
+      right: 28
+      shape: T
+      top: 36
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -6
+      right: 28
+      shape: T
+      top: 34
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -5
+      right: 28
+      shape: T
+      top: 33
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -5
+      right: 27
+      shape: T
+      top: 32
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -5
+      right: 26
+      shape: T
+      top: 31
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -5
+      right: 25
+      shape: T
+      top: 30
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -6
+      right: 24
+      shape: T
+      top: 30
+- - paint
+  - - brush_index: 0
+      facing: R
+      left: -6
+      right: 23
+      shape: TR
+      top: 29
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -4
+      right: 22
+      shape: TL
+      top: 26
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -3
+      right: 22
+      shape: T
+      top: 25
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -2
+      right: 23
+      shape: T
+      top: 25
+- - paint
+  - []
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -1
+      right: 24
+      shape: T
+      top: 25
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 0
+      right: 25
+      shape: T
+      top: 25
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 25
+      shape: T
+      top: 24
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 23
+      shape: T
+      top: 22
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 24
+      shape: T
+      top: 23
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 22
+      shape: T
+      top: 21
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 21
+      shape: T
+      top: 20
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 20
+      shape: T
+      top: 19
+- - paint
+  - - brush_index: 0
+      facing: R
+      left: 0
+      right: 19
+      shape: TR
+      top: 19
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 2
+      right: 18
+      shape: TL
+      top: 16
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 2
+      right: 17
+      shape: T
+      top: 15
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 3
+      right: 17
+      shape: T
+      top: 14
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 2
+      right: 16
+      shape: T
+      top: 14
+    - brush_index: 0
+      facing: L
+      left: 3
+      right: 16
+      shape: T
+      top: 13
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 4
+      right: 16
+      shape: T
+      top: 12
+- - paint
+  - - brush_index: 4
+      facing: L
+      left: -5
+      right: 21
+      shape: TL
+      top: 26
+    - brush_index: 3
+      facing: R
+      left: -8
+      right: 22
+      shape: R
+      top: 30
+    - brush_index: 0
+      facing: L
+      left: -7
+      right: 20
+      shape: T
+      top: 27
+    - brush_index: 1
+      facing: R
+      left: -4
+      right: 24
+      shape: R
+      top: 28
+    - brush_index: 0
+      facing: L
+      left: -8
+      right: 20
+      shape: T
+      top: 28
+    - brush_index: 4
+      facing: R
+      left: -7
+      right: 20
+      shape: L
+      top: 27
+    - brush_index: 0
+      facing: L
+      left: -8
+      right: 18
+      shape: TL
+      top: 26
+    - brush_index: 3
+      facing: R
+      left: -7
+      right: 22
+      shape: R
+      top: 29
+    - brush_index: 2
+      facing: R
+      left: -5
+      right: 22
+      shape: L
+      top: 27
+    - brush_index: 3
+      facing: R
+      left: -7
+      right: 21
+      shape: R
+      top: 28
+    - brush_index: 0
+      facing: R
+      left: -8
+      right: 19
+      shape: TR
+      top: 27
+    - brush_index: 2
+      facing: R
+      left: -4
+      right: 23
+      shape: L
+      top: 27
+    - brush_index: 3
+      facing: R
+      left: -6
+      right: 22
+      shape: R
+      top: 28
+    - brush_index: 1
+      facing: R
+      left: -3
+      right: 25
+      shape: R
+      top: 28
+    - brush_index: 3
+      facing: R
+      left: -9
+      right: 21
+      shape: R
+      top: 30
+    - brush_index: 4
+      facing: R
+      left: -6
+      right: 21
+      shape: L
+      top: 27
+    - brush_index: 0
+      facing: R
+      left: -10
+      right: 19
+      shape: TR
+      top: 29
+    - brush_index: 2
+      facing: R
+      left: -3
+      right: 24
+      shape: L
+      top: 27
+    - brush_index: 3
+      facing: R
+      left: -8
+      right: 21
+      shape: R
+      top: 29
+    - brush_index: 0
+      facing: L
+      left: -9
+      right: 18
+      shape: T
+      top: 27
+    - brush_index: 4
+      facing: R
+      left: -9
+      right: 18
+      shape: L
+      top: 27
+    - brush_index: 0
+      facing: L
+      left: -9
+      right: 20
+      shape: T
+      top: 29
+    - brush_index: 3
+      facing: R
+      left: -9
+      right: 19
+      shape: R
+      top: 28
+    - brush_index: 1
+      facing: R
+      left: -5
+      right: 23
+      shape: R
+      top: 28
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: -5
+      right: 17
+      shape: L
+      top: 22
+    - brush_index: 3
+      facing: R
+      left: -4
+      right: 20
+      shape: R
+      top: 24
+    - brush_index: 0
+      facing: L
+      left: -5
+      right: 16
+      shape: T
+      top: 21
+    - brush_index: 0
+      facing: L
+      left: -7
+      right: 16
+      shape: T
+      top: 23
+    - brush_index: 0
+      facing: L
+      left: -5
+      right: 17
+      shape: T
+      top: 22
+    - brush_index: 3
+      facing: R
+      left: -6
+      right: 19
+      shape: R
+      top: 25
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 18
+      shape: L
+      top: 22
+    - brush_index: 1
+      facing: R
+      left: -2
+      right: 22
+      shape: R
+      top: 24
+    - brush_index: 2
+      facing: R
+      left: -2
+      right: 21
+      shape: L
+      top: 23
+    - brush_index: 0
+      facing: L
+      left: -6
+      right: 16
+      shape: TL
+      top: 22
+    - brush_index: 1
+      facing: R
+      left: -1
+      right: 23
+      shape: R
+      top: 24
+    - brush_index: 0
+      facing: R
+      left: -8
+      right: 17
+      shape: TR
+      top: 25
+    - brush_index: 3
+      facing: R
+      left: -7
+      right: 17
+      shape: R
+      top: 24
+    - brush_index: 3
+      facing: R
+      left: -5
+      right: 20
+      shape: R
+      top: 25
+    - brush_index: 0
+      facing: L
+      left: -6
+      right: 18
+      shape: T
+      top: 24
+    - brush_index: 3
+      facing: R
+      left: -5
+      right: 19
+      shape: R
+      top: 24
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 17
+      shape: L
+      top: 21
+    - brush_index: 3
+      facing: R
+      left: -7
+      right: 19
+      shape: R
+      top: 26
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 19
+      shape: L
+      top: 23
+    - brush_index: 0
+      facing: L
+      left: -7
+      right: 18
+      shape: T
+      top: 25
+    - brush_index: 3
+      facing: R
+      left: -6
+      right: 20
+      shape: R
+      top: 26
+    - brush_index: 2
+      facing: R
+      left: -1
+      right: 22
+      shape: L
+      top: 23
+    - brush_index: 4
+      facing: R
+      left: -5
+      right: 16
+      shape: L
+      top: 21
+    - brush_index: 4
+      facing: R
+      left: -5
+      right: 18
+      shape: L
+      top: 23
+    - brush_index: 2
+      facing: R
+      left: -3
+      right: 20
+      shape: L
+      top: 23
+    - brush_index: 4
+      facing: R
+      left: -7
+      right: 16
+      shape: L
+      top: 23
+    - brush_index: 1
+      facing: R
+      left: -3
+      right: 21
+      shape: R
+      top: 24
+    - brush_index: 0
+      facing: L
+      left: -5
+      right: 18
+      shape: T
+      top: 23
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: -2
+      right: 18
+      shape: R
+      top: 20
+    - brush_index: 1
+      facing: R
+      left: 3
+      right: 21
+      shape: R
+      top: 18
+    - brush_index: 1
+      facing: R
+      left: 2
+      right: 20
+      shape: R
+      top: 18
+    - brush_index: 2
+      facing: R
+      left: 1
+      right: 18
+      shape: L
+      top: 17
+    - brush_index: 4
+      facing: R
+      left: 0
+      right: 16
+      shape: L
+      top: 16
+    - brush_index: 1
+      facing: R
+      left: 1
+      right: 19
+      shape: R
+      top: 18
+    - brush_index: 0
+      facing: L
+      left: -1
+      right: 14
+      shape: T
+      top: 15
+    - brush_index: 0
+      facing: L
+      left: -2
+      right: 16
+      shape: T
+      top: 18
+    - brush_index: 4
+      facing: R
+      left: -3
+      right: 14
+      shape: L
+      top: 17
+    - brush_index: 0
+      facing: L
+      left: -1
+      right: 15
+      shape: T
+      top: 16
+    - brush_index: 3
+      facing: R
+      left: -1
+      right: 18
+      shape: R
+      top: 19
+    - brush_index: 0
+      facing: L
+      left: -2
+      right: 14
+      shape: TL
+      top: 16
+    - brush_index: 0
+      facing: L
+      left: -3
+      right: 14
+      shape: T
+      top: 17
+    - brush_index: 4
+      facing: R
+      left: 0
+      right: 17
+      shape: L
+      top: 17
+    - brush_index: 0
+      facing: L
+      left: -1
+      right: 16
+      shape: T
+      top: 17
+    - brush_index: 4
+      facing: R
+      left: -1
+      right: 15
+      shape: L
+      top: 16
+    - brush_index: 4
+      facing: R
+      left: -1
+      right: 16
+      shape: L
+      top: 17
+    - brush_index: 4
+      facing: R
+      left: -1
+      right: 14
+      shape: L
+      top: 15
+    - brush_index: 3
+      facing: R
+      left: -2
+      right: 17
+      shape: R
+      top: 19
+    - brush_index: 3
+      facing: R
+      left: -3
+      right: 15
+      shape: R
+      top: 18
+    - brush_index: 3
+      facing: R
+      left: -1
+      right: 17
+      shape: R
+      top: 18
+    - brush_index: 0
+      facing: R
+      left: -4
+      right: 15
+      shape: TR
+      top: 19
+    - brush_index: 3
+      facing: R
+      left: -3
+      right: 17
+      shape: R
+      top: 20
+    - brush_index: 0
+      facing: L
+      left: -3
+      right: 16
+      shape: T
+      top: 19
+    - brush_index: 4
+      facing: R
+      left: 0
+      right: 15
+      shape: L
+      top: 15
+    - brush_index: 3
+      facing: R
+      left: 0
+      right: 18
+      shape: R
+      top: 18
+    - brush_index: 2
+      facing: R
+      left: 3
+      right: 20
+      shape: L
+      top: 17
+    - brush_index: 2
+      facing: R
+      left: 2
+      right: 19
+      shape: L
+      top: 17
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: -3
+      right: 9
+      shape: L
+      top: 12
+    - brush_index: 3
+      facing: R
+      left: -6
+      right: 7
+      shape: R
+      top: 13
+    - brush_index: 1
+      facing: R
+      left: -1
+      right: 12
+      shape: R
+      top: 13
+    - brush_index: 3
+      facing: R
+      left: -3
+      right: 10
+      shape: R
+      top: 13
+    - brush_index: 3
+      facing: R
+      left: -6
+      right: 9
+      shape: R
+      top: 15
+    - brush_index: 0
+      facing: R
+      left: -7
+      right: 7
+      shape: TR
+      top: 14
+    - brush_index: 3
+      facing: R
+      left: -5
+      right: 9
+      shape: R
+      top: 14
+    - brush_index: 2
+      facing: L
+      left: 1
+      right: 13
+      shape: TL
+      top: 12
+    - brush_index: 0
+      facing: L
+      left: -4
+      right: 8
+      shape: T
+      top: 12
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 7
+      shape: L
+      top: 11
+    - brush_index: 3
+      facing: R
+      left: -4
+      right: 10
+      shape: R
+      top: 14
+    - brush_index: 4
+      facing: R
+      left: -3
+      right: 7
+      shape: L
+      top: 10
+    - brush_index: 3
+      facing: R
+      left: -5
+      right: 10
+      shape: R
+      top: 15
+    - brush_index: 1
+      facing: R
+      left: -2
+      right: 11
+      shape: R
+      top: 13
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 8
+      shape: L
+      top: 12
+    - brush_index: 4
+      facing: R
+      left: -6
+      right: 6
+      shape: L
+      top: 12
+    - brush_index: 4
+      facing: R
+      left: -4
+      right: 6
+      shape: L
+      top: 10
+    - brush_index: 0
+      facing: L
+      left: -6
+      right: 8
+      shape: T
+      top: 14
+    - brush_index: 4
+      facing: R
+      left: -3
+      right: 8
+      shape: L
+      top: 11
+    - brush_index: 0
+      facing: L
+      left: -5
+      right: 8
+      shape: T
+      top: 13
+    - brush_index: 0
+      facing: L
+      left: -5
+      right: 6
+      shape: TL
+      top: 11
+    - brush_index: 0
+      facing: L
+      left: -4
+      right: 7
+      shape: T
+      top: 11
+    - brush_index: 1
+      facing: R
+      left: 0
+      right: 13
+      shape: R
+      top: 13
+    - brush_index: 0
+      facing: L
+      left: -4
+      right: 6
+      shape: T
+      top: 10
+    - brush_index: 3
+      facing: R
+      left: -4
+      right: 9
+      shape: R
+      top: 13
+    - brush_index: 0
+      facing: L
+      left: -6
+      right: 6
+      shape: T
+      top: 12
+- - paint
+  - - brush_index: 0
+      facing: R
+      left: -2
+      right: 9
+      selected: 0
+      shape: TR
+      top: 11
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 0
+      right: 8
+      selected: 0
+      shape: TL
+      top: 8
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 1
+      right: 9
+      selected: 0
+      shape: L
+      top: 8
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 1
+      right: 10
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 2
+      right: 11
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 2
+      right: 10
+      selected: 0
+      shape: L
+      top: 8
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 2
+      right: 9
+      selected: 0
+      shape: L
+      top: 7
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: 1
+      right: 8
+      selected: 0
+      shape: L
+      top: 7
+- - paint
+  - - brush_index: 4
+      facing: R
+      left: -1
+      right: 8
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: -1
+      right: 9
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: 1
+      right: 12
+      selected: 0
+      shape: R
+      top: 11
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: 0
+      right: 12
+      selected: 0
+      shape: R
+      top: 12
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: -1
+      right: 11
+      selected: 0
+      shape: R
+      top: 12
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: 0
+      right: 11
+      selected: 0
+      shape: R
+      top: 11
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: 2
+      right: 12
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 3
+      facing: R
+      left: 1
+      right: 11
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -1
+      right: 10
+      selected: 0
+      shape: T
+      top: 11
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 0
+      right: 10
+      selected: 0
+      shape: T
+      top: 10
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 10
+      selected: 0
+      shape: T
+      top: 9
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 9
+      selected: 0
+      shape: T
+      top: 8
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 1
+      right: 8
+      selected: 0
+      shape: T
+      top: 7
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: -1
+      right: 8
+      selected: 0
+      shape: T
+      top: 9
+- - paint
+  - - brush_index: 2
+      facing: R
+      left: 3
+      right: 12
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 2
+      facing: R
+      left: 4
+      right: 13
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 2
+      facing: R
+      left: 5
+      right: 14
+      selected: 0
+      shape: L
+      top: 9
+- - paint
+  - - brush_index: 1
+      facing: R
+      left: 3
+      right: 13
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 1
+      facing: R
+      left: 4
+      right: 14
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 1
+      facing: R
+      left: 5
+      right: 15
+      selected: 0
+      shape: R
+      top: 10
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 5
+      right: 16
+      selected: 0
+      shape: T
+      top: 11
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 6
+      right: 16
+      selected: 0
+      shape: T
+      top: 10
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 7
+      right: 16
+      selected: 0
+      shape: T
+      top: 9
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 8
+      right: 16
+      selected: 0
+      shape: T
+      top: 8
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 8
+      right: 17
+      selected: 0
+      shape: T
+      top: 9
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 9
+      right: 17
+      selected: 0
+      shape: T
+      top: 8
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 10
+      right: 17
+      selected: 0
+      shape: T
+      top: 7
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 11
+      right: 17
+      selected: 0
+      shape: T
+      top: 6
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 11
+      right: 16
+      selected: 0
+      shape: T
+      top: 5
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 12
+      right: 16
+      selected: 0
+      shape: T
+      top: 4
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 13
+      right: 16
+      selected: 0
+      shape: T
+      top: 3
+- - paint
+  - - brush_index: 0
+      facing: L
+      left: 14
+      right: 16
+      selected: 0
+      shape: T
+      top: 2
+right_rgb: '#5E0400'
+scale: 0.125
+tile_line_rgb: '#DDDDDD'
+top_rgb: '#72BB61'
+undo_stack: []

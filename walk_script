@@ -1,0 +1,16 @@
+delay 20
+message Hamish went for a walk one day.
+redo 12
+message He came to a forest full of big trees.
+redo 32
+message Hamish walked through the trees until he came to a little house.
+redo_til_branch
+message He went into the house and sat down at the table for a snack.
+branch 0
+redo
+message After his snack, Hamish continued on his walk.
+undo_til_branch
+branch 1
+redo
+message This is the end of the journey.
+exit

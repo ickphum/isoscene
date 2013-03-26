@@ -2006,25 +2006,7 @@ sub select_visible { #{{{1
 
 # list of previous color combinations
 
-# we have a conventional undo/redo arrangement, where you can move
-# back and forward in past actions but as soon as you do anything
-# except redo (having wound back), the redo stack is cleared. What if
-# the point where you restarted became a fork, and you could later go back
-# and return down the original path. What would the interface look like?
-# A custom dialog would be required...
-
-# once branching undo was implemented, you could jump back/forward to a branch point.
-# This could be a story-telling tool; a scene could contain multiple paths, and you
-# could choose which path to display via a script.
-
 # undo/redo multiple actions at once, eg one press of the undo button goes back 10 steps.
-
-# you could create checkpoints in the undo log and then quickly undo everything back to the most recent
-# checkpoint. Branch points (above) become automatic checkpoints.
-
-# Still on undo, display the stack sizes in the undo/redo buttons. See undo_or_redo for a partial attempt.
-# Later; I mocked this up and I don't think it's worth the ugliness, particularly as we're planning
-# to have a more sophisticated branching structure, for which stack sizes aren't as relevant.
 
 # layers
 
