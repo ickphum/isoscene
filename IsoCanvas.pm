@@ -1312,7 +1312,7 @@ sub draw_scene { #{{{1
     if ($param{tb_transparent_rbn}) {
         $dc->SetPen(wxTRANSPARENT_PEN);
     }
-    elsif ($param{tb_normal_rbn}) {
+    else {
         $dc->SetPen($self->tile_line_pen);
     }
 
@@ -1343,6 +1343,20 @@ sub draw_scene { #{{{1
     if ($action eq $IsoFrame::AC_PASTE || ($action eq $IsoFrame::AC_PAINT && $self->area_start)) {
         push @passes, 1;
     }
+
+    my $config = wxTheApp->config;
+    my %shape_text_offset = (
+        $SH_LEFT => [ -4, 30 ],
+        $SH_TOP => [ 20, -22 ],
+        $SH_RIGHT => [ 0, 0 ],
+        $SH_TRIANGLE_LEFT => [ 20, -22 ],
+        $SH_TRIANGLE_RIGHT => [ -4, 37 ],
+    );
+
+    my $big_font = $dc->GetFont;
+    $big_font->SetPointSize(24);
+    my $small_font = $dc->GetFont;
+    $small_font->SetPointSize(16);
 
     for my $pass (@passes) {
 
@@ -1384,11 +1398,38 @@ sub draw_scene { #{{{1
             my $shape = $Tile_shape->{ $tile->{shape} }
                 or $log->logdie("bad tile shape $tile->{shape}");
 
-            $dc->DrawPolygon(
-                $shape->{polygon_points}, 
+            my @anchor = (
                 $tile->{top} * $self->x_grid_size,
                 ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size,
             );
+            $dc->DrawPolygon( $shape->{polygon_points}, @anchor);
+
+            if ($config->display_palette_index || $config->display_color) {
+
+                my @strings = (
+                    $config->display_palette_index ? $tile->{brush_index} : '',
+                    $config->display_color ? $self->scene->palette->[ $tile->{brush_index} ] : '',
+                );
+                $strings[1] =~ s/#//;
+
+                my $text_offset = $shape_text_offset{ $tile->{shape} };
+
+                # display in 2 colors so we are somewhat readable against any background.
+                my @colors = (wxBLACK, wxWHITE);
+                my @fonts = ($big_font, $small_font);
+                for my $string_index (0,1) {
+                    next unless length $strings[$string_index];
+                    $dc->SetFont($fonts[$string_index]);
+                    for my $color_index (0,1) {
+                        $dc->SetTextForeground($colors[$color_index]);
+                        $dc->DrawText($strings[$string_index],
+                            $anchor[0] + 10 - $string_index + $text_offset->[0], 
+                            $anchor[1] + 1 - $string_index + $text_offset->[1] + 23 * $string_index
+                        );
+                    }
+                }
+
+            }
 
             # draw selected images, including temporary selections (or deselections) during area select
             my $part_of_area_select = defined $self->selected_tile->{$grid_key} && $action =~ /select/;
