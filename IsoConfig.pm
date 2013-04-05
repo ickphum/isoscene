@@ -21,6 +21,8 @@ __PACKAGE__->mk_accessors( qw(
     automatic_branching
     shade_change
     relative_shades
+    display_palette_index
+    display_color
     default_scene_file
     default_scene_scale
     default_scene_left_rgb
@@ -44,6 +46,8 @@ sub new { # {{{1
         automatic_branching => 0,
         shade_change => 30,
         relative_shades => "L,1,T,0,R,2",
+        display_palette_index => 0,
+        display_color => 0,
         default_scene_file => 'Start',
         default_scene_scale => 0.25,
         default_scene_left_rgb => '#ca9c5b',

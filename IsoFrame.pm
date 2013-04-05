@@ -545,6 +545,8 @@ sub show_menu { #{{{1
                 automatic_branching
                 script_delay_milliseconds
                 shade_change
+                display_palette_index
+                display_color
                 default_scene_file
                 default_scene_scale
                 default_scene_left_rgb
@@ -555,7 +557,7 @@ sub show_menu { #{{{1
                 default_scene_tile_line_rgb
             )];
             if (my $option = Wx::GetSingleChoice( 'Config Options', 'IsoScene', $options, $self )) {
-                if (my $value = $self->change_value($option, $app->config->$option)) {
+                if (defined(my $value = $self->change_value($option, $app->config->$option))) {
                     $app->config->$option($value);
                 }
             }
