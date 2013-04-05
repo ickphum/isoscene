@@ -102,9 +102,9 @@ our @ACTIONS = our (
 sub new { #{{{1
     my ($class, $scene, $parent, $title, $pos, $size) = @_;
 
-    $title  ||= "IsoScene"                 unless defined $title;
-    $pos    = [ 1100, 200 ]       unless defined $pos;
-    $size   = [ 700, 700 ]       unless defined $size;
+    $title  ||= "IsoScene"                      unless defined $title;
+    $pos    = $scene->position || [ 300, 300]   unless defined $pos;
+    $size   = $scene->size     || [ 700, 700]   unless defined $size;
 
     my $self = $class->SUPER::new( $parent, -1, $title, $pos, $size);
 
@@ -119,6 +119,28 @@ sub new { #{{{1
         unless ($self->undo_timer->IsRunning) {
             $self->undo_timer->Start(wxTheApp->config->undo_repeat_milliseconds, wxTIMER_CONTINUOUS);
         }
+    });
+
+    # track size and position continually so we don't need to do it on save
+    Wx::Event::EVT_SIZE($self, sub { 
+        my ($self, $event) = @_;
+        
+        if (my $scene = $self->canvas->scene) {
+            $scene->size([ $self->GetSizeWH ]);
+        }
+
+        $event->Skip;
+        return;
+    });
+    Wx::Event::EVT_MOVE($self, sub { 
+        my ($self, $event) = @_;
+
+        if (my $scene = $self->canvas->scene) {
+            $scene->position([ $event->GetPosition->x, $event->GetPosition->y ]);
+        }
+
+        $event->Skip;
+        return;
     });
 
     # slow button timer
@@ -902,11 +924,14 @@ sub open_from_file { #{{{1
     # save the existing scene
     wxTheApp->scene->save;
 
-    $log->info("load scene");
-    wxTheApp->scene( IsoScene->new({ file => $file }) );
+    wxTheApp->scene( my $scene = IsoScene->new({ file => $file }) );
     wxTheApp->set_frame_title;
-    $log->info("set canvas scene");
     $self->canvas->scene(wxTheApp->scene);
+    $self->Move(@{ $scene->position }) if $scene->position;
+    if (my $size = $scene->size) {
+        $log->debug("set size to " . Dumper($size));
+        $self->SetSize( $size->[0], $size->[1] );
+    }
 
     $self->Refresh;
 

@@ -16,6 +16,8 @@ __PACKAGE__->mk_accessors( qw(
     origin_x
     origin_y
     scale
+    size
+    position
     left_rgb
     top_rgb
     right_rgb
@@ -38,7 +40,8 @@ sub new { # {{{1
         $arg->{file} .= ".isc";
     }
 
-    my $config = wxTheApp->config;
+    my $app = wxTheApp;
+    my $config = $app->config;
 
     my $scene = $arg->{file}
         ? LoadFile($arg->{file}) # this will crash on bad file and I'm fine with that
@@ -46,6 +49,8 @@ sub new { # {{{1
             grid => {},
             origin_x => 0,
             origin_y => 0,
+            size => [ $app->frame->GetSizeWH ],
+            position => [ $app->frame->GetScreenPosition->x, $app->frame->GetScreenPosition->y ],
             palette => [],
             undo_stack => [],
             redo_stack => [],
@@ -79,7 +84,7 @@ sub save { #{{{1
     DumpFile($self->filename . '.isc', $self);
 
     wxTheApp->config->previous_scene_file($self->filename);
-    $log->debug("saved to " . $self->filename . '.isc');
+    $log->debug("saved to " . $self->filename . '.isc: ' . Dumper($self->size, $self->position));
 
     return;
 }

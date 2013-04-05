@@ -1997,9 +1997,6 @@ sub select_visible { #{{{1
 
 # undo stack to include selection
 
-# import of bitmap 
-#  * currently only works for top plane
-
 # line width / brush shape
 
 # floodfill
@@ -2008,8 +2005,13 @@ sub select_visible { #{{{1
 
 # undo/redo multiple actions at once, eg one press of the undo button goes back 10 steps.
 
-# layers
+# layers, ideally with transparency
 
 # textures; this may be against the spirit of the program, and may be prohibitively slow.
+
+# art ideas;
+#   Ravenloft-style maps
+#   Cross-sectional scenes, eg mines underground, workings above.
+#   Sets of small related objects or scenes
 
 1;

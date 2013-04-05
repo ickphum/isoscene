@@ -4,6 +4,7 @@ use Wx qw[:everything];
 use strict;
 use Log::Log4perl qw(get_logger);
 use Data::Dumper qw(Dumper);
+use Time::Piece;
 
 my $log;
 
@@ -257,10 +258,111 @@ $ENV{log_file_name} = 'test';
 Log::Log4perl->init("./log4perl.conf");
 $log = get_logger();
 
-unless(caller){
+#unless(caller){
+#
+#    my $app = TestApp->new();
+#    $app->MainLoop();
+#}
 
-    my $app = TestApp->new();
-    $app->MainLoop();
+sub datetime_description {
+    my ($tp) = @_;
+
+    my $now = localtime;
+    my $minutes = int(($now - $tp ) / 60) + 595;
+    my $value;
+
+#    if ($minutes < 60) {
+#        $value = "$minutes minutes ago";
+#    }
+#    elsif ($minutes < 120) {
+#        $minutes %= 60;
+#        $value = "1 hour, $minutes minutes ago";
+#    }
+#    elsif ($minutes < 600) {
+#        my $hours = int($minutes/60);
+#        $minutes -= $hours * 60;
+#        $value = "$hours hours, $minutes minutes ago";
+#    }
+    if ($minutes < 600) {
+
+        # in the last 10 hours, give a relative time ago ie M minutes ago or H hours, M minutes ago.
+        if ($minutes < 60) {
+            $value = '';
+        }
+        else {
+            my $hours = int($minutes/60);
+            $minutes -= $hours * 60;
+            $value = $hours . ' ' . ($hours == 1 ? 'hour' : 'hours') . ', ';
+        }
+        $value .= $minutes . ' ' . ($minutes == 1 ? 'minute' : 'minutes') . ' ago';
+    }
+    else {
+
+        # date and time, converting to today, yesterday, day before yesterday, last <weekday> where possible or just date.
+        my $elapsed_days = $now->strftime('%j') - $tp->strftime('%j');
+
+        my %day_term = (
+            0 => 'today',
+            1 => 'yesterday',
+            2 => 'day before yesterday',
+        );
+
+        my $day = $day_term{$elapsed_days};
+        unless ($day) {
+            if ($elapsed_days < 7) {
+
+                # use "Last <weekday>" in the last week
+                $day = "last " . $tp->strftime("%A");
+            }
+            else {
+
+                # final catch-all, just Fri Mar 13.
+                $day = $tp->strftime("%a %b %d");
+            }
+        }
+
+        ($value = $tp->strftime("%l:%M %P") . " $day") =~ s/\A\s+//;
+    }
+
+    $value =~ s/, 0 minutes//;
+
+    return $value;
+}
+
+my @times = qw(
+    2013/03/22_22:00:00
+    2013/03/22_21:57:00
+    2013/03/22_21:40:00
+    2013/03/22_21:30:00
+    2013/03/22_21:10:00
+    2013/03/22_20:57:00
+    2013/03/22_20:50:00
+    2013/03/22_20:30:00
+    2013/03/22_20:10:00
+    2013/03/22_20:00:00
+    2013/03/22_18:00:00
+    2013/03/22_16:00:00
+    2013/03/22_14:00:00
+    2013/03/22_12:00:00
+    2013/03/22_10:00:00
+    2013/03/22_08:00:00
+    2013/03/22_06:00:00
+    2013/03/21_16:00:00
+    2013/03/21_06:00:00
+    2013/03/20_16:00:00
+    2013/03/20_06:00:00
+    2013/03/19_16:00:00
+    2013/03/18_06:00:00
+    2013/03/17_06:00:00
+    2013/03/16_06:00:00
+    2013/03/15_06:00:00
+    2013/03/14_06:00:00
+    2013/03/13_06:00:00
+);
+
+for my $time (@times) {
+    my $tp = Time::Piece->strptime($time, "%Y/%m/%d_%T");
+    $log->info("time $time is " . datetime_description($tp));
 }
 
 ################################################################################
