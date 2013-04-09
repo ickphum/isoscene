@@ -21,12 +21,12 @@ use English qw(-no_match_vars);
 
 use IsoCanvas;
 use IsoPasteSelector;
-use IsoExportOptions;
+#use IsoExportOptions;
 
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    tool_panel canvas branch_choice_pnl message_pnl
+    tool_panel canvas branch_choice_pnl message_pnl export_options_pnl
 
     mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -38,6 +38,8 @@ __PACKAGE__->mk_accessors( qw(
     undo_timer undo_or_redo_flag branch_choice_position original_branch
 
     slow_button_timer slow_button_name
+
+    popup_name
 ));
 
 # globals {{{1
@@ -95,6 +97,17 @@ our @ACTIONS = our (
     $AC_SELECT_ALL,
     $AC_CHOOSE_BRANCH,
     ) = qw(paint sample erase_current erase_others erase_all lighten darken shade import paste select_current select_others select_all choose_branch);
+
+my @MENU_ITEMS = my (
+    $MI_NEW,
+    $MI_OPEN,
+    $MI_SAVE_AS,
+    $MI_EXPORT,
+    $MI_IMPORT,
+    $MI_SCENE_OPTIONS,
+    $MI_CONFIG_OPTIONS,
+    $MI_SAVE,
+    ) = ( "New", "Open", "Save As...", "Export", "Import", "Scene Options", "Config Options", "Save", );
 
 ################################################################################
 # Constructor. Creates a Wx::Frame object, adds a sizer and a status bar and
@@ -258,7 +271,7 @@ sub new { #{{{1
             $column_button_szr->Add(0, $button);
         }
     }
-    $tool_sizer->Add($column_button_szr, 0, wxEXPAND);
+    $tool_sizer->Add($column_button_szr, 1, wxEXPAND);
 
     my $undo_redo_button_szr = Wx::BoxSizer->new(wxHORIZONTAL);
     for my $operation (qw(undo undo_redo_menu redo)) {
@@ -290,10 +303,61 @@ sub new { #{{{1
 
     $tool_sizer->Add($undo_redo_button_szr, 0, wxEXPAND);
 
-    my $menu_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
+    my $menu_btn = $self->misc_btn->{menu} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{menu});
     $menu_btn->SetToolTip("Menu");
     $tool_sizer->Add($menu_btn, 0, wxEXPAND);
-    Wx::Event::EVT_BUTTON($self, $menu_btn, sub { $_[0]->show_menu; });
+    Wx::Event::EVT_BUTTON($self, $menu_btn, sub {
+        my ($self) = @_;
+        my $items = [ [ 'Recent', reverse @{ $app->config->previous_scene_files }  ], @MENU_ITEMS, ]; 
+
+        # replace 'Scene Options' item with submenu
+        if ((my $index = List::MoreUtils::firstidx { $_ eq 'Scene Options' } @{ $items }) >= 0) {
+            splice @{ $items }, $index, 1, [ 'Scene Options', qw(background_rgb bg_line_rgb tile_line_rgb tile_border) ];
+        }
+        else {
+            $log->logdie("can't find Scene Options in menu: " . Dumper($items));
+        }
+
+        # ditto for Config Options
+        if ((my $index = List::MoreUtils::firstidx { $_ eq 'Config Options' } @{ $items }) >= 0) {
+
+            # define the order in which we want to display these options
+            my @config_options = qw(
+                autosave_on_exit
+                autosave_period_seconds 
+                undo_wait_milliseconds
+                undo_repeat_milliseconds
+                automatic_branching
+                script_delay_milliseconds
+                shade_change
+                darken_lighten_change
+                display_palette_index
+                display_color
+                default_scene_file
+                default_scene_scale
+                default_scene_left_rgb
+                default_scene_top_rgb
+                default_scene_right_rgb
+                default_scene_background_rgb
+                default_scene_bg_line_rgb
+                default_scene_tile_line_rgb
+            );
+
+            # append the current value to the boolean options; these will become
+            # toggle items.
+            for my $option (qw(autosave_on_exit automatic_branching display_palette_index display_color)) {
+                my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
+                splice @config_options, $index, 1, $option . "?" . $app->config->$option;
+            }
+
+            splice @{ $items }, $index, 1, [ 'Config Options', @config_options ];
+        }
+        else {
+            $log->logdie("can't find Config Options in menu: " . Dumper($items));
+        }
+
+        $self->show_text_popup($items, \&do_menu_choice, $self->misc_btn->{menu});
+    });
 
     $log->debug("mode buttons");
 
@@ -323,6 +387,14 @@ sub new { #{{{1
     Wx::Event::EVT_CHOICE($self, $self->branch_choice_pnl->FindWindow('branch_chc'), \&change_branch_choice);
     Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), sub { $_[0]->finish_branch_choice(1); } );
     Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), sub { $_[0]->finish_branch_choice(0); } );
+
+    # export options panel
+    $self->export_options_pnl( $app->xrc->LoadPanel($self, 'export_options_pnl') );
+    $canvas_side_sizer->Add($self->export_options_pnl, 0, wxEXPAND );
+    $self->export_options_pnl->Hide;
+
+    Wx::Event::EVT_BUTTON($self, $self->export_options_pnl->FindWindow('export_btn'), \&finish_export_panel);
+    Wx::Event::EVT_BUTTON($self, $self->export_options_pnl->FindWindow('cancel_btn'), \&finish_export_panel);
 
     # message panel
     $self->message_pnl( $app->xrc->LoadPanel($self, 'message_pane') );
@@ -407,7 +479,7 @@ sub change_action { #{{{1
         my $brush = $self->cube_brush->{ $side };
         my $colour = $brush->GetColour;
         my @rgb = ($colour->Red, $colour->Green, $colour->Blue);
-        my $change = wxTheApp->config->shade_change;
+        my $change = wxTheApp->config->darken_lighten_change;
         $change = - $change if $action eq $AC_DARKEN;
         my @new_rgb = map { List::Util::max(List::Util::min($_ + $change, 255), 0) } @rgb;
         $self->cube_brush->{ $side }->SetColour(Wx::Colour->new(@new_rgb));
@@ -434,135 +506,120 @@ sub change_action { #{{{1
 }
 
 ################################################################################
-sub show_menu { #{{{1
-    my ($self) = @_;
+sub do_menu_choice { #{{{1
+    my ($self, $event) = @_;
+
+    my $string = $self->popup_name->{ $event->GetId }
+        or $log->logdie("no name for popup id " . $event->GetId . ", popup_name = " . Dumper($self->popup_name));
 
     my $app = wxTheApp;
 
-    my ($save, $save_as, $export, $import, $new, $open, $scene_options, $config_options) = ( "Save", "Save As...", qw(Export Import New Open), "Scene Options", "Config Options" );
-    my $choices = [ $new, $open, $save_as, $export, $import, $scene_options, $config_options, $save, ];
-    if (my $string = Wx::GetSingleChoice( 'File Menu', 'IsoScene', $choices, $self )) {
+    if ($string eq $MI_SAVE) {
+        $self->save_to_file;
+    }
+    elsif ($string eq $MI_OPEN) {
+        $self->open_from_file;
+    }
+    elsif ($string eq $MI_NEW) {
+        $app->scene->save;
+        $app->scene( IsoScene->new() );
+        $self->canvas->scene($app->scene);
+        $self->canvas->set_undo_redo_button_states;
+        $app->set_frame_title;
+        $self->Refresh;
+    }
+    elsif ($string eq $MI_SAVE_AS) {
+        my $old_name = $app->scene->filename;
 
-        if ($string eq $save) {
-            $self->save_to_file;
-        }
-        elsif ($string eq $open) {
-            $self->open_from_file;
-        }
-        elsif ($string eq $new) {
-            $app->scene->save;
-            $app->scene( IsoScene->new() );
-            $self->canvas->scene($app->scene);
-            $self->canvas->set_undo_redo_button_states;
+        # clear the name so the file dialog opens for a new name
+        $app->scene->filename(0);
+
+        if ($self->save_to_file) {
             $app->set_frame_title;
-            $self->Refresh;
-        }
-        elsif ($string eq $save_as) {
-            my $old_name = $app->scene->filename;
 
-            # clear the name so the file dialog opens for a new name
-            $app->scene->filename(0);
+            # the clipboard thumbnails for this scene now have the wrong name, both
+            # internally (in the clipboard list) and on disk. They'll work ok from
+            # within this scene (since the names still match, ie the name in the clipboard
+            # item points to the correct file on disk) but:
+            #   a)  it won't work when displaying the paste selector, since there we work
+            #       from thumb name back to to scene name,
+            #   b)  it's kind of messy
+            for my $item (@{ $app->scene->clipboard }) {
+                my $thumb_file = "clipboard/$item->{name}.png";
+                if (-f $thumb_file ) {
 
-            if ($self->save_to_file) {
-                $app->set_frame_title;
-
-                # the clipboard thumbnails for this scene now have the wrong name, both
-                # internally (in the clipboard list) and on disk. They'll work ok from
-                # within this scene (since the names still match, ie the name in the clipboard
-                # item points to the correct file on disk) but:
-                #   a)  it won't work when displaying the paste selector, since there we work
-                #       from thumb name back to to scene name,
-                #   b)  it's kind of messy
-                for my $item (@{ $app->scene->clipboard }) {
-                    my $thumb_file = "clipboard/$item->{name}.png";
-                    if (-f $thumb_file ) {
-
-                        if ($item->{name} =~ /(\w+)(_\d{8}_\d{6})/) {
-                            my ($scene, $time) = ($1,$2);
-                            $item->{name} = $app->scene->filename . $time;
-                            File::Copy::move $thumb_file, "clipboard/$item->{name}.png"
-                                or $log->warn("failed to move $thumb_file to clipboard/$item->{name}.png : $OS_ERROR");
-                        }
+                    if ($item->{name} =~ /(\w+)(_\d{8}_\d{6})/) {
+                        my ($scene, $time) = ($1,$2);
+                        $item->{name} = $app->scene->filename . $time;
+                        File::Copy::move $thumb_file, "clipboard/$item->{name}.png"
+                            or $log->warn("failed to move $thumb_file to clipboard/$item->{name}.png : $OS_ERROR");
                     }
                 }
-
             }
-            else {
 
-                # don't let the cancelled save change the name
-                $app->scene->filename($old_name);
-            }
         }
-        elsif ($string eq $export) {
-            my $dialog = IsoExportOptions->new($self);
-            if ($dialog->ShowModal == wxID_OK) {
-                $self->canvas->export_scene;
-            }
-        }
-        elsif ($string eq $import) {
-            my $dialog = Wx::FileDialog->new( $self,
-                'Open Image File',
-                '',
-                '',
-                'PNG (*.png)|*.png|GIF (*.gif)|*.gif',
-                wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+        else {
 
-            return 0 if $dialog->ShowModal == wxID_CANCEL;
-            return 0 unless my $file = ($dialog->GetPaths)[0];
-            $self->import_file($file);
-            my $bitmap = Wx::Bitmap->new(Wx::Image->new($file, wxBITMAP_TYPE_ANY));
-
-            $self->canvas->cursor_multiplier_x($bitmap->GetWidth);
-            $self->canvas->cursor_multiplier_y($bitmap->GetHeight);
-
-            $self->action($AC_IMPORT);
-            $self->canvas->set_cursor;
-            $self->Refresh;
-        }
-        elsif ($string eq $scene_options) {
-            my $options = [ qw(
-                background_rgb
-                bg_line_rgb
-                tile_line_rgb
-            )];
-            if (my $option = Wx::GetSingleChoice( 'Scene Options', 'IsoScene', $options, $self )) {
-                if (my $value = $self->change_value($option, $app->scene->$option)) {
-                    $app->scene->$option($value);
-                    $self->canvas->background_brush(Wx::Brush->new(Wx::Colour->new($app->scene->background_rgb), wxBRUSHSTYLE_SOLID)) if $option eq 'background_rgb';
-                    $self->canvas->bg_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->bg_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'bg_line_rgb';
-                    $self->canvas->tile_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->tile_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'tile_line_rgb';
-                    $self->canvas->Refresh;
-                }
-            }
-        }
-        elsif ($string eq $config_options) {
-            my $options = [ qw(
-                previous_scene_file 
-                autosave_on_exit
-                autosave_period_seconds 
-                undo_wait_milliseconds
-                undo_repeat_milliseconds
-                automatic_branching
-                script_delay_milliseconds
-                shade_change
-                display_palette_index
-                display_color
-                default_scene_file
-                default_scene_scale
-                default_scene_left_rgb
-                default_scene_top_rgb
-                default_scene_right_rgb
-                default_scene_background_rgb
-                default_scene_bg_line_rgb
-                default_scene_tile_line_rgb
-            )];
-            if (my $option = Wx::GetSingleChoice( 'Config Options', 'IsoScene', $options, $self )) {
-                if (defined(my $value = $self->change_value($option, $app->config->$option))) {
-                    $app->config->$option($value);
-                }
-            }
+            # don't let the cancelled save change the name
+            $app->scene->filename($old_name);
         }
     }
+    elsif ($string eq $MI_EXPORT) {
+
+        # display the export panel. Normal drawing operations can continue while this panel is displayed.
+        wxTheApp->load_panel_settings($self->export_options_pnl);
+        $self->export_options_pnl->Show;
+        $self->Layout;
+    }
+    elsif ($string eq $MI_IMPORT) {
+        my $dialog = Wx::FileDialog->new( $self,
+            'Open Image File',
+            '',
+            '',
+            'PNG (*.png)|*.png|GIF (*.gif)|*.gif',
+            wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+
+        return 0 if $dialog->ShowModal == wxID_CANCEL;
+        return 0 unless my $file = ($dialog->GetPaths)[0];
+        $self->import_file($file);
+        my $bitmap = Wx::Bitmap->new(Wx::Image->new($file, wxBITMAP_TYPE_ANY));
+
+        $self->canvas->cursor_multiplier_x($bitmap->GetWidth);
+        $self->canvas->cursor_multiplier_y($bitmap->GetHeight);
+
+        $self->action($AC_IMPORT);
+        $self->canvas->set_cursor;
+        $self->Refresh;
+    }
+    elsif ($string =~ /$MI_SCENE_OPTIONS:(.*)/) {
+        my $option = $1;
+        if (my $value = $self->change_value($option, $app->scene->$option)) {
+            $app->scene->$option($value);
+            $self->canvas->background_brush(Wx::Brush->new(Wx::Colour->new($app->scene->background_rgb), wxBRUSHSTYLE_SOLID)) if $option eq 'background_rgb';
+            $self->canvas->bg_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->bg_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'bg_line_rgb';
+            $self->canvas->tile_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->tile_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'tile_line_rgb';
+            $self->canvas->Refresh;
+        }
+    }
+    elsif ($string =~ /$MI_CONFIG_OPTIONS:(.*)/) {
+        my $option = $1;
+        
+        # boolean options are toggle items, so selecting one just flips the state
+        if ($option =~ /autosave_on_exit|automatic_branching|display_palette_index|display_color/) {
+            $app->config->$option($app->config->$option ? 0 : 1);
+        }
+        elsif (defined(my $value = $self->change_value($option, $app->config->$option))) {
+            $app->config->$option($value);
+        }
+        $self->canvas->Refresh;
+    }
+    elsif ($string =~ /Recent:(.*)/) {
+        $self->open_from_file($1);
+    }
+    else {
+        $log->info("unknown menu name: $string");
+    }
+
     return;
 }
 
@@ -909,17 +966,19 @@ sub save_to_file { #{{{1
 
 ################################################################################
 sub open_from_file { #{{{1
-    my ($self) = @_;
+    my ($self, $file) = @_;
 
-    my $dialog = Wx::FileDialog->new( $self,
-        'Open Scene from file',
-        '',
-        '',
-        'IsoScene files (*.isc)|*.isc',
-        wxFD_OPEN);
+    unless ($file) {
+        my $dialog = Wx::FileDialog->new( $self,
+            'Open Scene from file',
+            '',
+            '',
+            'IsoScene files (*.isc)|*.isc',
+            wxFD_OPEN);
 
-    return 0 if $dialog->ShowModal == wxID_CANCEL;
-    return 0 unless my $file = ($dialog->GetPaths)[0];
+        return 0 if $dialog->ShowModal == wxID_CANCEL;
+        return 0 unless $file = ($dialog->GetPaths)[0];
+    }
 
     my $busy = new Wx::BusyCursor;
 
@@ -938,6 +997,24 @@ sub open_from_file { #{{{1
     $self->Refresh;
 
     return 1;
+}
+
+################################################################################
+sub finish_export_panel { #{{{1
+    my ($self, $event) = @_;
+
+    my $button = $event->GetEventObject;
+    $log->info("finish_export_panel: " . $button->GetName);
+
+    if ($button->GetName eq 'export_btn') {
+        wxTheApp->save_panel_settings($self->export_options_pnl);
+        $self->canvas->export_scene;
+    }
+
+    $self->export_options_pnl->Hide;
+    $self->Layout;
+
+    return;
 }
 
 ################################################################################
@@ -1102,6 +1179,71 @@ sub show_button_popup { #{{{1
     # when a button appears directly under the pointer and is then ignored.
     $popup->Move($position->x + $size, $position->y);
     $popup->Popup;
+
+    return;
+}
+
+################################################################################
+sub show_text_popup { #{{{1
+    my ($self, $items, $callback, $button) = @_;
+
+    my $menu = Wx::Menu->new();
+
+    my @ids;
+
+    # link the auto-generated ids to the item name; this hash is built every time
+    # we display a popup menu, since only one can be displayed at a time.
+    $self->popup_name({});
+
+    my $add_items;
+    $add_items = sub {
+        my ($parent_menu, $items, $parent_names) = @_;
+
+        for my $item (@{ $items }) {
+
+            my ($menu_item, $item_name);
+            if (ref $item) {
+                # this is a submenu; do this recursively
+                my $sub_menu = Wx::Menu->new();
+
+                # the first item in the list is the submenu label
+                $item_name = shift @{ $item };
+
+                $add_items->($sub_menu, $item, [ @{ $parent_names }, $item_name ]);
+
+                # add the submenu to the parent
+                $menu_item = $parent_menu->Append(-1, $item_name, $sub_menu);
+
+            }
+            else {
+                if ($item =~ /(.*)\?([01])/) {
+                    $item = $1;
+                    my $flag = $2;
+                    $log->info("boolean $item = $flag");
+                    $menu_item = $parent_menu->AppendCheckItem(-1, $item);
+                    $parent_menu->Check($menu_item->GetId, $flag) if $flag;
+                }
+                else {
+                    $menu_item = $parent_menu->Append(-1, $item);
+                }
+                $item_name = join(':', @{ $parent_names }, $item);
+            }
+
+            push @ids, $menu_item->GetId;
+            $self->popup_name->{ $menu_item->GetId } = $item_name;
+        }
+    };
+
+    $add_items->($menu, $items, []);
+
+    Wx::Event::EVT_MENU_RANGE($self, List::Util::min(@ids), List::Util::max(@ids), $callback);
+
+    my @point = $button->GetPositionXY;
+    my @size = $button->GetSizeWH;
+    $point[0] += $size[0];
+    $point[1] += $size[1] - 6;
+    $point[1] -= 23 * scalar @{ $items };
+    $self->PopupMenu($menu, @point);
 
     return;
 }

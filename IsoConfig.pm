@@ -12,7 +12,7 @@ my $log = get_logger;
 my $CONFIG_FILENAME = 'iso.yml';
 
 __PACKAGE__->mk_accessors( qw(
-    previous_scene_file
+    previous_scene_files
     autosave_on_exit
     autosave_period_seconds
     script_delay_milliseconds
@@ -20,6 +20,7 @@ __PACKAGE__->mk_accessors( qw(
     undo_repeat_milliseconds
     automatic_branching
     shade_change
+    darken_lighten_change
     relative_shades
     display_palette_index
     display_color
@@ -38,6 +39,7 @@ sub new { # {{{1
     my( $class, $arg ) = @_;
 
     my $default_config = {
+        previous_scene_files => [],
         autosave_on_exit => 1,
         autosave_period_seconds => 60,
         script_delay_milliseconds => 50,
@@ -45,6 +47,7 @@ sub new { # {{{1
         undo_repeat_milliseconds => 20,
         automatic_branching => 0,
         shade_change => 30,
+        darken_lighten_change => 30,
         relative_shades => "L,1,T,0,R,2",
         display_palette_index => 0,
         display_color => 0,
@@ -82,7 +85,6 @@ sub new { # {{{1
 sub save { #{{{1
     my ($self) = @_;
 
-    $log->debug("save config to $CONFIG_FILENAME, previous scene is " . $self->previous_scene_file);
     DumpFile($CONFIG_FILENAME, $self);
 
     return;

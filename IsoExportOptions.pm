@@ -62,7 +62,7 @@ sub save_export_options { #{{{1
     my $app = wxTheApp;
 
     $app->save_dialog_settings('export_options', $Control);
-    $log->info("export_options: " . Dumper($app->scene->export_options));
+    $log->debug("export_options: " . Dumper($app->scene->export_options));
 
     $dialog->EndModal(wxID_OK);
     return;

@@ -3,6 +3,7 @@
 use strict;
 
 use Wx qw[:everything];
+# use Wx::RegionIterator;
 use Log::Log4perl qw(get_logger);
 use List::MoreUtils;
 use Storable qw(dclone);
@@ -232,6 +233,8 @@ sub new { #{{{1
     $self->set_cursor;
     $self->cursor_multiplier_x(1);
     $self->cursor_multiplier_y(1);
+    $self->last_device_x(0);
+    $self->last_device_y(0);
 
     Wx::Event::EVT_SIZE($self, \&find_logical_size);
     Wx::Event::EVT_PAINT($self, \&repaint_canvas);
@@ -388,6 +391,7 @@ sub mouse_event_handler { #{{{1
     # my $start_mouse = [ gettimeofday ];
 
     my $refresh;
+    my @refresh_corners;
     my $frame = $self->frame;
     my $mode = $frame->mode;
     my $side = $frame->current_side;
@@ -402,6 +406,10 @@ sub mouse_event_handler { #{{{1
     if ($grid_key ne ($self->current_grid_key || '')) {
         $refresh = 1;
         $self->current_grid_key($grid_key);
+
+#        if ($event_flags == 0) {
+#            @refresh_corners = ($device_x, $self->last_device_x, $device_y, $self->last_device_y);
+#        }
     }
     elsif ($event_flags == 0 && $mode ne $IsoFrame::MO_MOVE ) {
         
@@ -689,7 +697,16 @@ sub mouse_event_handler { #{{{1
     }
 
 #    $log->debug("refresh from mouse_event_handler") if $refresh;
-    $self->Refresh if $refresh;
+#    if (@refresh_corners) {
+#        my $rect = Wx::Rect->new(List::Util::min(@refresh_corners[0,1]) - $self->y_grid_size,
+#            List::Util::min(@refresh_corners[2,3]) - $self->y_grid_size,
+#            abs($refresh_corners[0] - $refresh_corners[1]) + $self->y_grid_size * 2,
+#            abs($refresh_corners[2] - $refresh_corners[3]) + $self->y_grid_size * 2);
+#        $self->RefreshRect($rect);
+#    }
+#    else {
+        $self->Refresh if $refresh;
+#    }
 
     $self->last_device_x($device_x);
     $self->last_device_y($device_y);
@@ -1251,6 +1268,8 @@ sub repaint_canvas { #{{{1
     my $dc = Wx::PaintDC->new( $self );
     my $frame = $self->frame;
 
+    # my $region_iterator = Wx::RegionIterator->new($self->GetUpdateRegion);
+
     my $start_refresh = [ gettimeofday ];
 
     $dc->SetBackground($self->background_brush);
@@ -1278,6 +1297,12 @@ sub draw_scene { #{{{1
 
     my $frame = $self->frame;
     my $current_brush = 0;
+
+    my ($TB_TRANSPARENT, $TB_NORMAL, $TB_MATCHING_TILE) = qw(transparent normal matching_tile);
+    my $tile_border = $self->scene->tile_border;
+    $tile_border = $TB_TRANSPARENT if $param{tb_transparent_rbn};
+    $tile_border = $TB_NORMAL if $param{tb_normal_rbn};
+    $tile_border = $TB_MATCHING_TILE if $param{tb_matching_tile_rbn};
 
     # my $start_draw = [ gettimeofday ];
 
@@ -1309,7 +1334,7 @@ sub draw_scene { #{{{1
 
 #    return;
 
-    if ($param{tb_transparent_rbn}) {
+    if ($tile_border eq $TB_TRANSPARENT) {
         $dc->SetPen(wxTRANSPARENT_PEN);
     }
     else {
@@ -1391,7 +1416,7 @@ sub draw_scene { #{{{1
 
             $dc->SetBrush($palette->[ $tile->{brush_index} ]);
 
-            if ($param{tb_matching_tile_rbn}) {
+            if ($tile_border eq $TB_MATCHING_TILE) {
                 $dc->SetPen(Wx::Pen->new($dc->GetBrush->GetColour,1,wxPENSTYLE_SOLID));
             }
 
@@ -2033,6 +2058,8 @@ sub select_visible { #{{{1
 ################################################################################
 
 # TODO {{{1
+
+# autohide error messages
 
 # compression of data files
 

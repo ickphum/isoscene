@@ -1,0 +1,69 @@
+0:00:01.000,0:00:06.000
+We'll start by drawing a simple block.
+
+0:00:07.000,0:00:14.000
+Turn on Area mode for easier areas.
+
+0:00:16.000,0:00:20.000
+Darken the current side, then set other sides to shades of the new color.
+
+0:00:40.000,0:00:44.000
+Long press on a cube side to open a color selector.
+
+0:01:19.000,0:01:25.000
+Select all and copy to clipboard. Clipboard has full history of previous items copied or cut.
+
+0:01:27.000,0:01:28.000
+Unselect all.
+
+0:01:41.000,0:01:45.000
+Sample color from existing tile, then darken.
+
+0:02:15.000,0:02:19.000
+Paste tower tiles copied previously.
+
+0:02:23.000,0:02:26.000
+Change erase mode with long press.
+
+0:03:11.000,0:03:15.000
+Saving is automatic; the only time action is needed is to change the name.
+
+0:03:19.000,0:03:22.000
+Start a new scene for the background.
+
+0:04:38.000,0:04:41.000
+Select all and copy to this scene's clipboard.
+
+0:04:44.000,0:04:47.000
+Save this scene as Grass then switch back to the original scene.
+
+0:04:52.000,0:04:56.000
+A long press on the Paste button brings up a list with previous items copied in this scene and a dialog option to select from other scenes' clipboards.
+
+0:04:58.000,0:05:04.000
+We're now going to select and then paste an item from the Grass scene's clipboard.
+
+0:05:22.000,0:05:25.000
+Note that each scene is auto-saved when closed.
+
+0:05:28.000,0:05:35.000
+Each scene has persistent undo & redo stacks; at any time, you can rewind to an earlier state. You can then save, and redo the actions later on if required.
+
+0:05:40.000,0:05:48.000
+The undo/redo facility also provides for branching, so you can undo some work, try a new approach, and then revert to the original version, all within the application.
+
+0:05:52.000,0:05:56.000
+Scenes can be exported to PNG or JPEG files, and common image formats can be imported to any of the 3 planes.
+
+0:05:58.000,0:06:03.000
+We'll draw a simple shape and export it.
+
+0:06:27.000,0:06:32.000
+Exports can be done in various predefined page sizes for printing or a custom size can be specified, as here.
+
+0:06:42.000,0:06:47.000
+Now we'll import the image file we just created.
+
+0:07:49.000,0:07:55.000
+Thanks for watching.
+

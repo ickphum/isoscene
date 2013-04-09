@@ -30,6 +30,7 @@ __PACKAGE__->mk_accessors( qw(
     filename
     clipboard
     export_options
+    tile_border
 ));
 
 ################################################################################
@@ -43,27 +44,35 @@ sub new { # {{{1
     my $app = wxTheApp;
     my $config = $app->config;
 
+    my $default_scene = {
+        grid => {},
+        origin_x => 0,
+        origin_y => 0,
+        palette => [],
+        undo_stack => [],
+        redo_stack => [],
+        clipboard => [],
+        scale => $config->default_scene_scale,
+        left_rgb => $config->default_scene_left_rgb,
+        top_rgb => $config->default_scene_top_rgb,
+        right_rgb => $config->default_scene_right_rgb,
+        background_rgb => $config->default_scene_background_rgb,
+        bg_line_rgb => $config->default_scene_bg_line_rgb,
+        tile_line_rgb => $config->default_scene_tile_line_rgb,
+        filename => $config->default_scene_file,
+        tile_border => 'normal',
+    };
+
     my $scene = $arg->{file}
         ? LoadFile($arg->{file}) # this will crash on bad file and I'm fine with that
-        : {
-            grid => {},
-            origin_x => 0,
-            origin_y => 0,
-            size => [ $app->frame->GetSizeWH ],
-            position => [ $app->frame->GetScreenPosition->x, $app->frame->GetScreenPosition->y ],
-            palette => [],
-            undo_stack => [],
-            redo_stack => [],
-            clipboard => [],
-            scale => $config->default_scene_scale,
-            left_rgb => $config->default_scene_left_rgb,
-            top_rgb => $config->default_scene_top_rgb,
-            right_rgb => $config->default_scene_right_rgb,
-            background_rgb => $config->default_scene_background_rgb,
-            bg_line_rgb => $config->default_scene_bg_line_rgb,
-            tile_line_rgb => $config->default_scene_tile_line_rgb,
-            filename => $config->default_scene_file,
-        };
+        : $default_scene;
+
+    # make sure all new keys are added to old scenes loaded from file
+    for my $key (keys %{ $default_scene }) {
+        unless (defined $scene->{$key}) {
+            $scene->{$key} = $default_scene->{$key};
+        }
+    }
 
     my $self = $class->SUPER::new($scene);
 
@@ -72,9 +81,26 @@ sub new { # {{{1
         $self->filename(File::Basename::basename($self->filename, '.isc'));
     }
 
+    $self->remember_filename if $self->filename;
+
     $self->clipboard([]) unless $self->clipboard;
 
     return $self;
+}
+
+################################################################################
+sub remember_filename { #{{{1
+    my ($self) = @_;
+
+    # If this file occurs lower down, remove it
+    my $previous_scene_files = wxTheApp->config->previous_scene_files;
+    if ((my $index = List::MoreUtils::firstidx { $_ eq $self->filename } @{ $previous_scene_files }) >= 0) {
+        splice @{ $previous_scene_files }, $index, 1;
+    }
+
+    push @{ $previous_scene_files }, $self->filename;
+
+    return;
 }
 
 ################################################################################
@@ -83,7 +109,8 @@ sub save { #{{{1
 
     DumpFile($self->filename . '.isc', $self);
 
-    wxTheApp->config->previous_scene_file($self->filename);
+    $self->remember_filename;
+
     $log->debug("saved to " . $self->filename . '.isc: ' . Dumper($self->size, $self->position));
 
     return;

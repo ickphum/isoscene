@@ -31,6 +31,7 @@ sub new { # {{{1
     $self->{xrc} = Wx::XmlResource->new();
     $self->xrc->InitAllHandlers;
     $self->xrc->Load('export_options.xrc');
+    $self->xrc->Load('export_options_pnl.xrc');
     $self->xrc->Load('choose_branch.xrc');
     $self->xrc->Load('message_pane.xrc');
 
@@ -69,10 +70,16 @@ sub new { # {{{1
 
     $self->config( IsoConfig->new() );
 
+    # try to load the most recent file saved
     my $filename = $option->{file} ||
-        ((defined wxTheApp->config->previous_scene_file && -f (wxTheApp->config->previous_scene_file . '.isc'))
-            ? wxTheApp->config->previous_scene_file
+        ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . '.isc')
+            ? $self->config->previous_scene_files->[-1]
             : undef);
+
+#    my $filename = $option->{file} ||
+#        ((defined wxTheApp->config->previous_scene_file && -f (wxTheApp->config->previous_scene_file . '.isc'))
+#            ? wxTheApp->config->previous_scene_file
+#            : undef);
 
     $self->scene( IsoScene->new({ file => $filename }) );
 
@@ -255,33 +262,54 @@ sub set_button_bitmap { #{{{1
 }
 
 ################################################################################
-sub save_dialog_settings { #{{{1
-    my ($self, $setting_group, $dialog_control) = @_;
+sub save_panel_settings { #{{{1
+    my ($self, $panel) = @_;
 
+
+    # setting group is named for the panel, less "_pnl"
+    (my $setting_group = $panel->GetName) =~ s/_pnl//;
     my $scene = $self->scene;
-
     $scene->$setting_group({});
     my $setting = $scene->$setting_group;
 
-    for my $control_name (keys %{ $dialog_control } ) {
-        next unless $control_name =~ /_(?:rbn|chb|txt|sld)\z/;
-        $setting->{ $control_name } = $dialog_control->{ $control_name }->GetValue;
-    }
+    # recursive sub to find all child controls
+    my $get_child_values;
+    $get_child_values = sub {
+        my ($parent) = @_;
+
+        for my $child ( $parent->GetChildren ) {
+            $log->info("child $child " . $child->GetName . " has children? " . ($child->GetChildren ? 'yes' : 'undef'));
+            if ($child->GetChildren) {
+                $get_child_values->($child);
+            }
+            else {
+                $setting->{ $child->GetName } = $child->GetValue if $child->GetName =~ /_(?:rbn|chb|txt|sld)\z/;;
+            }
+        }
+    };
+
+    $get_child_values->($panel);
+
+    $log->info("save_panel_settings: $setting_group = " . Dumper($setting));
 
     return;
 }
 
 ################################################################################
-sub load_dialog_settings { #{{{1
-    my ($self, $setting_group, $dialog_control) = @_;
+sub load_panel_settings { #{{{1
+    my ($self, $panel) = @_;
 
+    (my $setting_group = $panel->GetName) =~ s/_pnl//;
     my $scene = $self->scene;
-
     my $setting = $scene->$setting_group;
 
-    for my $control_name (keys %{ $dialog_control } ) {
+    for my $control_name (keys %{ $setting } ) {
         next unless $control_name =~ /_(?:rbn|chb|txt|sld)\z/;
-        $dialog_control->{ $control_name }->SetValue($setting->{ $control_name });
+
+        # FindWindow is recursive so we don't need to be
+        if (my $control = $panel->FindWindow($control_name)) {
+            $control->SetValue($setting->{ $control_name });
+        }
     }
 
     return;
