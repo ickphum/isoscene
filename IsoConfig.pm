@@ -18,6 +18,7 @@ __PACKAGE__->mk_accessors( qw(
     script_delay_milliseconds
     undo_wait_milliseconds
     undo_repeat_milliseconds
+    repeated_pasting
     automatic_branching
     shade_change
     darken_lighten_change
@@ -45,6 +46,7 @@ sub new { # {{{1
         script_delay_milliseconds => 50,
         undo_wait_milliseconds => 200,
         undo_repeat_milliseconds => 20,
+        repeated_pasting => 1,
         automatic_branching => 0,
         shade_change => 30,
         darken_lighten_change => 30,

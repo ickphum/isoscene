@@ -327,6 +327,7 @@ sub new { #{{{1
                 autosave_period_seconds 
                 undo_wait_milliseconds
                 undo_repeat_milliseconds
+                repeated_pasting
                 automatic_branching
                 script_delay_milliseconds
                 shade_change
@@ -345,7 +346,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit automatic_branching display_palette_index display_color)) {
+            for my $option (qw(autosave_on_exit repeated_pasting automatic_branching display_palette_index display_color)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -605,7 +606,7 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|automatic_branching|display_palette_index|display_color/) {
+        if ($option =~ /autosave_on_exit|repeated_pasting|automatic_branching|display_palette_index|display_color/) {
             $app->config->$option($app->config->$option ? 0 : 1);
         }
         elsif (defined(my $value = $self->change_value($option, $app->config->$option))) {

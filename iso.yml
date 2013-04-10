@@ -17,13 +17,14 @@ previous_scene_file: Tycho
 previous_scene_files:
 - Grass
 - RedCube
-- Start
 - a
 - b
 - Bridge
+- Start
 - Walk
 - Xevious
 relative_shades: L,1,T,0,R,2
+repeated_pasting: 1
 script_delay_milliseconds: 50
 shade_change: '20'
 undo_repeat_milliseconds: '20'

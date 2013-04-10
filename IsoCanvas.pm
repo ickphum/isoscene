@@ -396,6 +396,7 @@ sub mouse_event_handler { #{{{1
     my $mode = $frame->mode;
     my $side = $frame->current_side;
     my $action = $frame->action;
+    my $app = wxTheApp;
 
     my ($logical_x, $logical_y) = ( int(($device_x - $self->scene->origin_x) / $self->scene->scale),
         int(($device_y - $self->scene->origin_y) / $self->scene->scale));
@@ -489,9 +490,17 @@ sub mouse_event_handler { #{{{1
 
             if ($action eq $IsoFrame::AC_PASTE) {
                 $log->debug("do paste");
-                $frame->action($IsoFrame::AC_PAINT);
-                $self->set_cursor;
-                $self->paste_list(undef);
+
+                # after pasting, do we continue pasting or switch to paint
+                if ($app->config->repeated_pasting) {
+                    $self->paint_shape(1);
+                }
+                else {
+                    $frame->action($IsoFrame::AC_PAINT);
+                    $self->set_cursor;
+                    $self->paste_list(undef);
+                }
+
                 $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->selected_tile } ]);
                 push @{ $self->tile_cache }, keys %{ $self->selected_tile };
                 $self->selected_tile({});
@@ -949,8 +958,15 @@ sub clipboard_operation { #{{{1
             $self->frame->action($IsoFrame::AC_PASTE);
             $self->set_cursor;
 
-            # use the index specified in $data or if undef, the most recent clipboard object
-            $self->paste_list($self->scene->clipboard->[ defined $data ? $data : 0]->{tiles});
+            # when we paste from the list, we want to make that item the most recent one so
+            # we can paste it again from the button
+            if (defined $data && $data > 0) {
+                my $item = splice @{ $self->scene->clipboard }, $data, 1;
+                unshift @{ $self->scene->clipboard }, $item;
+            }
+
+            # following the above, we're always pasting the first item in the list
+            $self->paste_list($self->scene->clipboard->[0]->{tiles});
 
             # a true value here tells mouse_event_handler to paint the pasted tiles on each mouse event.
             # we change it from 1 to 2 on left-down, which means the next left-up is the paste position.
