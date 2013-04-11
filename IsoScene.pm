@@ -3,11 +3,13 @@ package IsoScene;
 
 use base qw(Class::Accessor::Fast);
 use Data::Dumper;
-use YAML::XS qw(DumpFile LoadFile);
+use YAML::XS qw(Dump Load);
 use Storable qw(dclone);
 use Log::Log4perl qw(get_logger);
 use Wx qw(wxTheApp);
 use File::Basename;
+use IO::Compress::Zip qw(zip $ZipError) ;
+use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 
 my $log = get_logger;
 
@@ -38,7 +40,7 @@ sub new { # {{{1
     my ( $class, $arg ) = @_;
 
     if ($arg->{file} && $arg->{file} !~ /\./) {
-        $arg->{file} .= ".isc";
+        $arg->{file} .= ".isz";
     }
 
     my $app = wxTheApp;
@@ -63,9 +65,20 @@ sub new { # {{{1
         tile_border => 'normal',
     };
 
-    my $scene = $arg->{file}
-        ? LoadFile($arg->{file}) # this will crash on bad file and I'm fine with that
-        : $default_scene;
+    my $scene;
+    if ($arg->{file}) {
+
+        my $unzipped_yaml;
+        unless (unzip $arg->{file} => \$unzipped_yaml) {
+            $log->logdie("Error during uncompression of $file: $UnzipError");
+            next;
+        }
+
+        $scene = Load($unzipped_yaml);
+    }
+    else {
+        $scene = $default_scene;
+    }
 
     # make sure all new keys are added to old scenes loaded from file
     for my $key (keys %{ $default_scene }) {
@@ -78,7 +91,7 @@ sub new { # {{{1
 
     # fix old files with full paths in filename
     if ($arg->{file}) {
-        $self->filename(File::Basename::basename($self->filename, '.isc'));
+        $self->filename(File::Basename::basename($self->filename, '.isz'));
     }
 
     $self->remember_filename if $self->filename;
@@ -107,11 +120,13 @@ sub remember_filename { #{{{1
 sub save { #{{{1
     my ($self, $settings) = @_;
 
-    DumpFile($self->filename . '.isc', $self);
+    my $yaml_scene = Dump($self);
+    zip \$yaml_scene => $self->filename . '.isz', Name => ($self->filename . '.isc')
+        or $log->logdie("zip failed: $ZipError");
 
     $self->remember_filename;
 
-    $log->debug("saved to " . $self->filename . '.isc: ' . Dumper($self->size, $self->position));
+    $log->debug("saved to " . $self->filename . '.isz');
 
     return;
 }

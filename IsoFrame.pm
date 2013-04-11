@@ -947,12 +947,12 @@ sub save_to_file { #{{{1
             'Save Scene to file',
             '',
             '',
-            'IsoScene files (*.isc)|*.isc',
+            'IsoScene files (*.isz)|*.isz',
             wxFD_SAVE);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;
         return 0 unless my $file = ($dialog->GetPaths)[0];
-        $file = File::Basename::basename($file, '.isc');
+        $file = File::Basename::basename($file, '.isz');
         $scene->filename($file);
     }
 
@@ -974,7 +974,7 @@ sub open_from_file { #{{{1
             'Open Scene from file',
             '',
             '',
-            'IsoScene files (*.isc)|*.isc',
+            'IsoScene files (*.isz)|*.isz',
             wxFD_OPEN);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;

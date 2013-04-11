@@ -9,7 +9,7 @@ use base qw(Wx::Dialog Class::Accessor::Fast);
 use Wx qw[:everything];
 use Data::Dumper;
 use Storable qw(dclone);
-use YAML::XS qw(DumpFile LoadFile);
+use YAML::XS qw(Load);
 use List::Util qw(min max);
 use List::MoreUtils qw(firstidx);
 use Log::Log4perl qw(get_logger);
@@ -18,6 +18,7 @@ use Time::HiRes qw(time);
 use File::Copy;
 use English qw(-no_match_vars);
 use Time::Piece;
+use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 
 use IsoCanvas;
 
@@ -69,13 +70,19 @@ sub new { #{{{1
             next if $scene eq $this_scene_name;
 
             unless ($other_scene{$scene}) {
-                if (-f "$scene.isc") {
+                if (-f "$scene.isz") {
                     $log->info("load scene $scene");
+
+                    my $unzipped_yaml;
+                    unless (unzip "$scene.isz" => \$unzipped_yaml) {
+                        $log->error("Error during uncompression of $scene: $UnzipError");
+                        next;
+                    }
 
                     # create the other_scene entry with a full copy of the scene
                     $other_scene{$scene} = {
                         name => $scene,
-                        scene => LoadFile("$scene.isc"),
+                        scene => Load($unzipped_yaml),
                         clipboard_item => {},
                         thumbs => [],
                     };

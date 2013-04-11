@@ -72,14 +72,9 @@ sub new { # {{{1
 
     # try to load the most recent file saved
     my $filename = $option->{file} ||
-        ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . '.isc')
+        ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . '.isz')
             ? $self->config->previous_scene_files->[-1]
             : undef);
-
-#    my $filename = $option->{file} ||
-#        ((defined wxTheApp->config->previous_scene_file && -f (wxTheApp->config->previous_scene_file . '.isc'))
-#            ? wxTheApp->config->previous_scene_file
-#            : undef);
 
     $self->scene( IsoScene->new({ file => $filename }) );
 
