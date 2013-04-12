@@ -334,6 +334,7 @@ sub new { #{{{1
                 darken_lighten_change
                 display_palette_index
                 display_color
+                display_key
                 default_scene_file
                 default_scene_scale
                 default_scene_left_rgb
@@ -346,7 +347,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit repeated_pasting automatic_branching display_palette_index display_color)) {
+            for my $option (qw(autosave_on_exit repeated_pasting automatic_branching display_palette_index display_color display_key)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -606,7 +607,7 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|repeated_pasting|automatic_branching|display_palette_index|display_color/) {
+        if ($option =~ /autosave_on_exit|repeated_pasting|automatic_branching|display_palette_index|display_color|display_key/) {
             $app->config->$option($app->config->$option ? 0 : 1);
         }
         elsif (defined(my $value = $self->change_value($option, $app->config->$option))) {
@@ -1220,7 +1221,6 @@ sub show_text_popup { #{{{1
                 if ($item =~ /(.*)\?([01])/) {
                     $item = $1;
                     my $flag = $2;
-                    $log->info("boolean $item = $flag");
                     $menu_item = $parent_menu->AppendCheckItem(-1, $item);
                     $parent_menu->Check($menu_item->GetId, $flag) if $flag;
                 }

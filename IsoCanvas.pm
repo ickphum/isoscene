@@ -746,8 +746,12 @@ sub find_tile { #{{{1
     my $tile;
 
     # look for an instant hit
-    unless ($tile = $self->scene->grid->{$grid_key}) {
-        $log->debug("not at $grid_key");
+    $log->info("check instant at $grid_key");
+    if ($tile = $self->scene->grid->{$grid_key}) {
+        $log->info("found instant $tile->{shape}");
+    }
+    else {
+        # $log->info("no instant hit at $grid_key");
 
         # have to pull apart the key to check other halves
         $log->logdie("bad grid key $grid_key") unless $grid_key =~ /\A([A-Z]+)_(-?\d+)_(-?\d+)_(-?\d+)\z/;
@@ -766,7 +770,18 @@ sub find_tile { #{{{1
                 $left--;
                 $right--;
                 $tile = $self->scene->grid->{ "R_${left}_${top}_${right}" };
+
+                # must be a LEFT tile
+                if ($tile && $tile->{shape} ne $SH_LEFT) {
+                    $log->info("found $tile->{shape} instead of L, clear it");
+                    $tile = undef;
+                }
+
+                $log->info("found tile B at R_${left}_${top}_${right}") if $tile;
                 $log->debug("tile at R_${left}_${top}_${right} ?" . Dumper($tile));
+            }
+            else {
+                $log->info("found tile A at $grid_key");
             }
         }
         else {
@@ -775,6 +790,7 @@ sub find_tile { #{{{1
             $left++;
             $top--;
             $tile = $self->scene->grid->{ "L_${left}_${top}_${right}" };
+            $log->info("found tile C at L_${left}_${top}_${right}") if $tile;
             $log->debug("tile at L_${left}_${top}_${right} ?" . Dumper($tile));
         }
     }
@@ -788,7 +804,7 @@ sub mark_area { #{{{1
 
     my ($start_left, $start_top, $start_right, $start_facing) = @{ $self->area_start };
 
-    $log->debug("mark_area $shape from $start_left, $start_top, $start_right, $start_facing to $left, $top, $right, $facing");
+    $log->info("mark_area $shape from $start_left, $start_top, $start_right, $start_facing to $left, $top, $right, $facing");
 
     my @start = ($start_left, $start_top, $start_right);
     my @current = ($left, $top, $right);
@@ -838,6 +854,23 @@ sub mark_area { #{{{1
                         # due to facing; mark the key of the tile we found.
                         $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                         $marked_hash->{$grid_key} = 1;
+                    }
+
+                    if ( $action eq $IsoFrame::AC_ERASE_ALL || $action eq $IsoFrame::AC_SELECT_ALL) {
+
+                        # triangle handling; we have to check for triangles starting in the
+                        # other facing, which isn't being done by find_tile because you need to
+                        # know the current shape to know where to extend the search.
+                        if ($shape eq 'L') {
+                            my ($new_facing, $delta) = $facing eq 'L' ? ('R', -1) : ('L', 1);
+                            my @tpoint = ($point[0] + $delta, $point[1], $point[2] + $delta);
+                            my $grid_key = "${new_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
+                            if (my $tile = $self->find_tile ( $grid_key )) {
+                                $grid_key = join('_', @{ $tile }{qw( facing left top right )});
+                                $log->info("triangle key $grid_key");
+                                $marked_hash->{$grid_key} = 1;
+                            }
+                        }
                     }
                 }
             }
@@ -1445,10 +1478,15 @@ sub draw_scene { #{{{1
             );
             $dc->DrawPolygon( $shape->{polygon_points}, @anchor);
 
-            if ($config->display_palette_index || $config->display_color) {
+            if (($config->display_palette_index || $config->display_key) || $config->display_color) {
+
+                my @big_strings = ();
+                push @big_strings, $tile->{brush_index} if $config->display_palette_index;
+                push @big_strings, $grid_key if $config->display_key;
+                my $big_string = scalar @big_strings ? join(',', @big_strings) : '';
 
                 my @strings = (
-                    $config->display_palette_index ? $tile->{brush_index} : '',
+                    $big_string,
                     $config->display_color ? $self->scene->palette->[ $tile->{brush_index} ] : '',
                 );
                 $strings[1] =~ s/#//;
