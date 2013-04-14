@@ -821,6 +821,28 @@ sub mark_area { #{{{1
     my $axis_1_coeff = pop @axes;
     my $axis_0_coeff = pop @axes;
 
+    # this is how we check for triangles in the other facing once we've established there isn't a full 
+    # tile at a location. These offsets may be defined (or at least implied) as part of some other structure
+    # if you looked hard enough...
+    # The top level key is the current shape, the second level is the facing we're marking with (so
+    # we're looking for triangles with the other facing). The list are offsets to the current coord.
+    my $shape_triangle_shift = {
+        $SH_LEFT => {
+            L => [ -1, 0, -1 ],
+            R => [ 1, 0, 1 ],
+        },
+        $SH_TOP => {
+            L => [ -1, 1, 0 ],
+            R => [ 1, -1, 0 ],
+        },
+        $SH_RIGHT => {
+            L => [ 0, 0, 0 ],
+            R => [ 0, 0, 0 ],
+        },
+    };
+    my $other_facing = $facing eq 'L' ? 'R' : 'L';
+    my $triangle_shift = $shape_triangle_shift->{ $shape }->{ $facing };
+
     my $action = $self->frame->action;
 
     my @point;
@@ -855,23 +877,25 @@ sub mark_area { #{{{1
                         $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                         $marked_hash->{$grid_key} = 1;
                     }
+                }
 
-                    if ( $action eq $IsoFrame::AC_ERASE_ALL || $action eq $IsoFrame::AC_SELECT_ALL) {
+                # if we're matching all shapes, look for triangles with the other facing.
+                if ($action eq $IsoFrame::AC_ERASE_ALL || $action eq $IsoFrame::AC_SELECT_ALL) {
 
-                        # triangle handling; we have to check for triangles starting in the
-                        # other facing, which isn't being done by find_tile because you need to
-                        # know the current shape to know where to extend the search.
-                        if ($shape eq 'L') {
-                            my ($new_facing, $delta) = $facing eq 'L' ? ('R', -1) : ('L', 1);
-                            my @tpoint = ($point[0] + $delta, $point[1], $point[2] + $delta);
-                            my $grid_key = "${new_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
-                            if (my $tile = $self->find_tile ( $grid_key )) {
-                                $grid_key = join('_', @{ $tile }{qw( facing left top right )});
-                                $log->info("triangle key $grid_key");
-                                $marked_hash->{$grid_key} = 1;
-                            }
+                    # triangle handling; we have to check for triangles starting in the
+                    # other facing, which isn't being done by find_tile because you need to
+                    # know the current shape to know where to extend the search.
+                    my @tpoint = ($point[0] + $triangle_shift->[0], $point[1] + $triangle_shift->[1], $point[2] + $triangle_shift->[2]);
+                    my $grid_key = "${other_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
+                    $log->info("check triangle key $grid_key");
+                    if (my $tile = $self->find_tile ( $grid_key )) {
+                        if ($tile->{shape} =~ /T[LR]/) {
+                            $grid_key = join('_', @{ $tile }{qw( facing left top right )});
+                            $log->info("triangle key $grid_key found $tile->{shape}");
+                            $marked_hash->{$grid_key} = 1;
                         }
                     }
+
                 }
             }
         }
@@ -1478,16 +1502,12 @@ sub draw_scene { #{{{1
             );
             $dc->DrawPolygon( $shape->{polygon_points}, @anchor);
 
-            if (($config->display_palette_index || $config->display_key) || $config->display_color) {
-
-                my @big_strings = ();
-                push @big_strings, $tile->{brush_index} if $config->display_palette_index;
-                push @big_strings, $grid_key if $config->display_key;
-                my $big_string = scalar @big_strings ? join(',', @big_strings) : '';
+            if ($config->display_palette_index || $config->display_color || $config->display_key) {
 
                 my @strings = (
-                    $big_string,
+                    $config->display_palette_index ? $tile->{brush_index} : '',
                     $config->display_color ? $self->scene->palette->[ $tile->{brush_index} ] : '',
+                    $config->display_key ? join(':', @{ $tile }{qw(shape left top right)}) : '',
                 );
                 $strings[1] =~ s/#//;
 
@@ -1495,8 +1515,8 @@ sub draw_scene { #{{{1
 
                 # display in 2 colors so we are somewhat readable against any background.
                 my @colors = (wxBLACK, wxWHITE);
-                my @fonts = ($big_font, $small_font);
-                for my $string_index (0,1) {
+                my @fonts = ($big_font, $small_font, $small_font);
+                for my $string_index (0,1,2) {
                     next unless length $strings[$string_index];
                     $dc->SetFont($fonts[$string_index]);
                     for my $color_index (0,1) {
@@ -2114,8 +2134,6 @@ sub select_visible { #{{{1
 # TODO {{{1
 
 # autohide error messages
-
-# compression of data files
 
 # undo stack to include selection
 
