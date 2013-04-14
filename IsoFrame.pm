@@ -447,6 +447,12 @@ sub change_action { #{{{1
     if ($self->action eq $AC_PASTE) {
         $self->canvas->paste_list(undef);
         $self->canvas->paint_shape(0);
+
+        # clear last set of floating tiles
+        for my $key (keys %{ $self->canvas->selected_tile } ) {
+            delete $self->canvas->scene->grid->{$key};
+        }
+        $self->canvas->selected_tile({});
     }
 
     # changing to another action during import cancels the import

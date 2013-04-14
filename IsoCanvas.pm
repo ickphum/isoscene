@@ -746,9 +746,9 @@ sub find_tile { #{{{1
     my $tile;
 
     # look for an instant hit
-    $log->info("check instant at $grid_key");
+    $log->debug("check instant at $grid_key");
     if ($tile = $self->scene->grid->{$grid_key}) {
-        $log->info("found instant $tile->{shape}");
+        $log->debug("found instant $tile->{shape}");
     }
     else {
         # $log->info("no instant hit at $grid_key");
@@ -773,15 +773,15 @@ sub find_tile { #{{{1
 
                 # must be a LEFT tile
                 if ($tile && $tile->{shape} ne $SH_LEFT) {
-                    $log->info("found $tile->{shape} instead of L, clear it");
+                    $log->debug("found $tile->{shape} instead of L, clear it");
                     $tile = undef;
                 }
 
-                $log->info("found tile B at R_${left}_${top}_${right}") if $tile;
+                $log->debug("found tile B at R_${left}_${top}_${right}") if $tile;
                 $log->debug("tile at R_${left}_${top}_${right} ?" . Dumper($tile));
             }
             else {
-                $log->info("found tile A at $grid_key");
+                $log->debug("found tile A at $grid_key");
             }
         }
         else {
@@ -790,7 +790,7 @@ sub find_tile { #{{{1
             $left++;
             $top--;
             $tile = $self->scene->grid->{ "L_${left}_${top}_${right}" };
-            $log->info("found tile C at L_${left}_${top}_${right}") if $tile;
+            $log->debug("found tile C at L_${left}_${top}_${right}") if $tile;
             $log->debug("tile at L_${left}_${top}_${right} ?" . Dumper($tile));
         }
     }
@@ -804,7 +804,7 @@ sub mark_area { #{{{1
 
     my ($start_left, $start_top, $start_right, $start_facing) = @{ $self->area_start };
 
-    $log->info("mark_area $shape from $start_left, $start_top, $start_right, $start_facing to $left, $top, $right, $facing");
+    $log->debug("mark_area $shape from $start_left, $start_top, $start_right, $start_facing to $left, $top, $right, $facing");
 
     my @start = ($start_left, $start_top, $start_right);
     my @current = ($left, $top, $right);
@@ -887,11 +887,11 @@ sub mark_area { #{{{1
                     # know the current shape to know where to extend the search.
                     my @tpoint = ($point[0] + $triangle_shift->[0], $point[1] + $triangle_shift->[1], $point[2] + $triangle_shift->[2]);
                     my $grid_key = "${other_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
-                    $log->info("check triangle key $grid_key");
+                    $log->debug("check triangle key $grid_key");
                     if (my $tile = $self->find_tile ( $grid_key )) {
                         if ($tile->{shape} =~ /T[LR]/) {
                             $grid_key = join('_', @{ $tile }{qw( facing left top right )});
-                            $log->info("triangle key $grid_key found $tile->{shape}");
+                            $log->debug("triangle key $grid_key found $tile->{shape}");
                             $marked_hash->{$grid_key} = 1;
                         }
                     }
@@ -1458,9 +1458,12 @@ sub draw_scene { #{{{1
 
     for my $pass (@passes) {
 
+#        $log->info("pass $pass");
+
         # The ?: operator short-circuits so we don't get the selected_tile keys unless we need them.
         for my $grid_key ($pass == 0 ? @{ $tile_keys } : keys %{ $self->selected_tile }) {
 
+#            $log->info("paint $grid_key");
             my $tile = $self->scene->grid->{$grid_key};
 
             # skip this stuff for temporary tiles
@@ -2134,6 +2137,10 @@ sub select_visible { #{{{1
 # TODO {{{1
 
 # autohide error messages
+
+# copy/cut clears selection
+
+# single click to fill in empty sides with shades of clicked tile
 
 # undo stack to include selection
 
