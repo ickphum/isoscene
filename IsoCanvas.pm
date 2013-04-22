@@ -156,6 +156,23 @@ my %Shape_clashes = (
     ],
 );
 
+# the offsets from the anchor for each shape to the anchors of the other shapes
+# when they are painted to form a cube.
+my $Cube_side_offset = {
+    L => {
+        T => [ 0, 0, 0 ],
+        R => [ 0, 1, 1 ],
+    },
+    T => {
+        L => [ 0, 0, 0, ],
+        R => [ 0, 1, 1 ],
+    },
+    R => {
+        L => [ 0, -1, -1 ],
+        T => [ 0, -1, -1 ],
+    },
+};
+
 # extent of each shape relative to its anchor, in multiples
 # of the relevant grid size.
 my $Shape_extent = {
@@ -310,9 +327,12 @@ sub set_cursor { #{{{1
     my ($self) = @_;
 
     my $frame = $self->frame;
-    $self->SetCursor($frame->mode eq $IsoFrame::MO_MOVE
+    my $cursor = $frame->mode eq $IsoFrame::MO_MOVE
         ? $self->action_cursor->{move}
-        : $self->action_cursor->{$frame->action});
+        : $self->action_cursor->{$frame->action};
+    $log->logdie("no cursor for action " . $frame->action)
+        unless $cursor;
+    $self->SetCursor($cursor);
 
     return;
 }
@@ -436,7 +456,7 @@ sub mouse_event_handler { #{{{1
                 ? [ $left, $top, $right, $facing ]
                 : undef);
 
-            if ($action eq $IsoFrame::AC_PAINT) {
+            if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
 
                 # set the current brush index, adding the color to the palette if we need to
                 my $palette_index = $self->get_palette_index($frame->cube_brush->{$side}->GetColour->GetAsString(wxC2S_HTML_SYNTAX));
@@ -508,7 +528,7 @@ sub mouse_event_handler { #{{{1
             }
 
             if ($mode eq $IsoFrame::MO_AREA) {
-                if ($action eq $IsoFrame::AC_PAINT) {
+                if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
                     $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->selected_tile } ]);
                     push @{ $self->tile_cache }, keys %{ $self->selected_tile };
                     $self->selected_tile({});
@@ -632,6 +652,23 @@ sub mouse_event_handler { #{{{1
                     $refresh = 1;
                     $self->add_undo_action($IsoFrame::AC_PAINT, $self->scene->grid->{$grid_key});
                 }
+            }
+        }
+        elsif ($action eq $IsoFrame::AC_SHADE_CUBE) {
+
+            if ($self->area_start) {
+
+                # clear tiles from previous area paint
+                for my $key (keys %{ $self->selected_tile } ) {
+                    delete $self->scene->grid->{$key};
+                }
+                $self->selected_tile({});
+
+                $refresh = $self->mark_area($self->selected_tile, $left, $top, $right, $facing, $paint_shape);
+            }
+            else {
+
+                $refresh = $self->shade_cube($left, $top, $right, $facing, $paint_shape);
             }
         }
         elsif ($action eq $IsoFrame::AC_PASTE) {
@@ -777,8 +814,7 @@ sub find_tile { #{{{1
                     $tile = undef;
                 }
 
-                $log->debug("found tile B at R_${left}_${top}_${right}") if $tile;
-                $log->debug("tile at R_${left}_${top}_${right} ?" . Dumper($tile));
+                $log->debug("found tile B at R_${left}_${top}_${right} " . Dumper($tile)) if $tile;
             }
             else {
                 $log->debug("found tile A at $grid_key");
@@ -790,8 +826,14 @@ sub find_tile { #{{{1
             $left++;
             $top--;
             $tile = $self->scene->grid->{ "L_${left}_${top}_${right}" };
-            $log->debug("found tile C at L_${left}_${top}_${right}") if $tile;
-            $log->debug("tile at L_${left}_${top}_${right} ?" . Dumper($tile));
+
+            # must be a TOP tile
+            if ($tile && $tile->{shape} ne $SH_TOP) {
+                $log->debug("found $tile->{shape} instead of L, clear it");
+                $tile = undef;
+            }
+
+            $log->debug("found tile C at L_${left}_${top}_${right} " . Dumper($tile)) if $tile;
         }
     }
 
@@ -853,10 +895,11 @@ sub mark_area { #{{{1
             $point[ $axes[1] ] = $coord_1;
             $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $coord_1; 
 
-            if ($action eq $IsoFrame::AC_PAINT) {
+            if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
                 if (my $key = $self->paint_tile(@point, $facing, $shape)) {
                     $marked_hash->{$key} = 1;
                 }
+
             }
             else {
 
@@ -897,6 +940,60 @@ sub mark_area { #{{{1
                     }
 
                 }
+            }
+        }
+    }
+
+    if ($action eq $IsoFrame::AC_SHADE_CUBE) {
+        if ($shape eq $SH_RIGHT) {
+            for my $coord_0 ($mins[0] .. $maxes[0]) {
+                $point[ $axes[0] ] = $coord_0;
+                $point[ $axes[1] ] = $mins[1];
+                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $mins[1]; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+
+            for my $coord_1 (($mins[1] + 1) .. $maxes[1]) {
+                $point[ $axes[0] ] = $mins[0];
+                $point[ $axes[1] ] = $coord_1;
+                $point[ $axes[2] ] = $axis_0_coeff * $mins[0] + $axis_1_coeff * $coord_1; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+        }
+        elsif ($shape eq $SH_LEFT) {
+            for my $coord_0 ($mins[0] .. $maxes[0]) {
+                $point[ $axes[0] ] = $coord_0;
+                $point[ $axes[1] ] = $maxes[1];
+                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $maxes[1]; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+
+            my $coord_1 = $maxes[1] - 1;
+            while ($coord_1 >= $mins[1]) {
+                $point[ $axes[0] ] = $mins[0];
+                $point[ $axes[1] ] = $coord_1;
+                $point[ $axes[2] ] = $axis_0_coeff * $mins[0] + $axis_1_coeff * $coord_1; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+                $coord_1--;
+            }
+        }
+        elsif ($shape eq $SH_TOP) {
+            my $coord_0 = $maxes[0];
+            while ( $coord_0 >= $mins[0]) {
+                $point[ $axes[0] ] = $coord_0;
+                $point[ $axes[1] ] = $maxes[1];
+                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $maxes[1]; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+                $coord_0--;
+            }
+
+            my $coord_1 = $maxes[1] - 1;
+            while ($coord_1 >= $mins[1]) {
+                $point[ $axes[0] ] = $maxes[0];
+                $point[ $axes[1] ] = $coord_1;
+                $point[ $axes[2] ] = $axis_0_coeff * $maxes[0] + $axis_1_coeff * $coord_1; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+                $coord_1--;
             }
         }
     }
@@ -999,6 +1096,116 @@ sub paint_tile { #{{{1
     }
 
     return $grid_key;
+}
+
+################################################################################
+sub shade_cube { #{{{1
+    my ($self, $left, $top, $right, $facing, $paint_shape, $marked_hash) = @_;
+
+    my $frame = $self->frame;
+    my $refresh;
+
+    # try to find a tile initially; we don't want to use paint_tile as that will paint
+    # a triangle if it can, ie in the "other" half of the tile. If we hit anything,
+    # we want to use that as the start of a cube.
+    my $tile = $self->find_tile("${facing}_${left}_${top}_${right}");
+
+    # if there was no tile present, paint at this spot and then try the find again;
+    # this will result in all 3 sides appearing with one click.
+    unless ($tile) {
+
+        # if we're called in area mode, the tile should always exist (it was just painted by
+        # mark_area).
+        $log->logconfess("painting in shade_cube in area mode") if $marked_hash;
+
+        if (my $grid_key = $self->paint_tile($left, $top, $right, $facing, $paint_shape)) {
+            $refresh = 1;
+            $self->add_undo_action($IsoFrame::AC_PAINT, $self->scene->grid->{$grid_key});
+            $tile = $self->find_tile("${facing}_${left}_${top}_${right}");
+        }
+        else {
+
+            # don't see how this could happen; we could neither find nor paint at this location
+            $log->logdie("huh? at ${facing}_${left}_${top}_${right}");
+        }
+    }
+
+    if ($tile) {
+
+        $log->debug("found a tile to shade_cube " . Dumper($tile));
+
+        # if the tile is a triangle, we try to infer the shape by matching its color
+        # against the current colors.  If we can't, we do nothing.
+        my $cube_side;
+        if ($tile->{shape} =~ /T[LR]/) {
+            for my $side (qw(L T R)) {
+                my $palette_index = $self->get_palette_index($frame->cube_brush->{$side}->GetColour->GetAsString(wxC2S_HTML_SYNTAX));
+                if ($tile->{brush_index} == $palette_index) {
+                    $log->debug("matched cube side $side at $left,$top,$right");
+                    $cube_side = $side;
+
+                    # if we're in the "wrong" half, convert the grid key so it points
+                    # to the location that would have been used by the tile.
+                    my %triangle_delta = (
+                        L => {
+                            L => [ -1, 0, -1 ],
+                        },
+                        R => {
+                            T => [ 1, -1, 0 ],
+                        }
+                    );
+                    if (my $delta = $triangle_delta{$tile->{facing}}->{$cube_side}) {
+                        $left += $delta->[0];
+                        $top += $delta->[1];
+                        $right += $delta->[2];
+                    }
+                    last;
+                }
+            }
+
+        }
+        else {
+            $cube_side = $tile->{shape};
+            $left = $tile->{left};
+            $top = $tile->{top};
+            $right = $tile->{right};
+        }
+        if ($cube_side) {
+            $log->debug("paint a cube based on side $cube_side, side anchor $left,$top,$right");
+
+            # we have a tile (which gives us a color), a side shape (ie L, T or R, not a triangle)
+            # and the logical anchor for that shape (ie regardless of whether the whole shape is present
+            # or just a triangle), from which we can derive the positions of the other sides. 
+
+            # find the shades for the other sides
+            my @other_shades = $frame->find_shades($cube_side, $tile->{brush_index});
+            $log->debug("other_shades " . Dumper(\@other_shades));
+
+            for my $other_side ( @{ $IsoFrame::OTHER_SIDES{ $cube_side } } ) {
+
+                # find the anchor for this side
+                my $offsets = $Cube_side_offset->{ $cube_side }->{ $other_side };
+                $log->debug("offsets " . Dumper($offsets));
+
+                # convert the shade into a brush index
+                my $new_rgb = shift @other_shades;
+                my $brush_index = $self->get_palette_index( sprintf("#%02X%02X%02X", @{ $new_rgb }));
+                $log->debug("brush_index $brush_index");
+
+                # paint the tile
+                if (my $grid_key = $self->paint_tile($left + $offsets->[0], $top + $offsets->[1], $right + $offsets->[2],
+                    $other_side eq 'T' ? 'L' : 'R', $other_side, $brush_index)) 
+                {
+                    $self->add_undo_action($IsoFrame::AC_PAINT, $self->scene->grid->{$grid_key});
+                    $refresh = 1;
+                    $marked_hash->{$grid_key} = 1 if $marked_hash;
+                }
+            }
+
+        }
+    }
+
+    return $refresh;
 }
 
 ################################################################################
@@ -1760,6 +1967,9 @@ sub export_scene { #{{{1
     # draw the scene into the memory dc
     $export_dc->SetBackground(wxTRANSPARENT_BRUSH);
     $export_dc->Clear;
+
+    # clear the tile cache so the whole scene is drawn
+    $self->tile_cache(0);
 
     $self->draw_scene($export_dc, %{ $export_option });
 

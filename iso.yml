@@ -2,7 +2,7 @@
 automatic_branching: 0
 autosave_on_exit: 1
 autosave_period_seconds: 60
-darken_lighten_change: '10'
+darken_lighten_change: '15'
 default_scene_background_rgb: '#AAAAAA'
 default_scene_bg_line_rgb: '#B3B3B3'
 default_scene_file: Start
@@ -12,17 +12,13 @@ default_scene_scale: 0.25
 default_scene_tile_line_rgb: '#DDDDDD'
 default_scene_top_rgb: '#e8ba79'
 display_color: 0
+display_key: 0
 display_palette_index: 0
-previous_scene_file: Tycho
 previous_scene_files:
-- Grass
-- RedCube
-- a
-- b
-- Bridge
-- Start
 - Walk
+- Tycho
 - Xevious
+- Start
 relative_shades: L,1,T,0,R,2
 repeated_pasting: 1
 script_delay_milliseconds: 50

@@ -90,13 +90,14 @@ our @ACTIONS = our (
     $AC_LIGHTEN,
     $AC_DARKEN,
     $AC_SHADE,
+    $AC_SHADE_CUBE,
     $AC_IMPORT,
     $AC_PASTE,
     $AC_SELECT,
     $AC_SELECT_OTHERS,
     $AC_SELECT_ALL,
     $AC_CHOOSE_BRANCH,
-    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade import paste select_current select_others select_all choose_branch);
+    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade shade_cube import paste select_current select_others select_all choose_branch);
 
 my @MENU_ITEMS = my (
     $MI_NEW,
@@ -198,7 +199,7 @@ sub new { #{{{1
 
     $self->action_btn({});
     my @column_buttons = ();
-    for my $action ( $AC_PAINT, $AC_SAMPLE, 'erase', 'select', $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE) {
+    for my $action ( $AC_PAINT, $AC_SAMPLE, 'erase', 'select', $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE, $AC_SHADE_CUBE) {
 
         my $action_btn = $self->action_btn->{$action} = Wx::BitmapButton->new($tool_panel, -1,
             $action =~ /erase|select/
@@ -214,8 +215,6 @@ sub new { #{{{1
         }
         push @column_buttons, $action_btn;
     }
-
-    push @column_buttons, 0, 10, 10;
 
     $self->mode_btn({});
 
@@ -463,22 +462,22 @@ sub change_action { #{{{1
 
     elsif ($action eq $AC_SHADE) {
 
-        # change the cube colors of the unselected sides
-        my $side = $self->current_side;
-        my $brush = $self->cube_brush->{ $side };
-        my $colour = $brush->GetColour;
-        my @rgb = ($colour->Red, $colour->Green, $colour->Blue);
-        my $change = wxTheApp->config->shade_change;
-        my %relative_shade = split ',', wxTheApp->config->relative_shades;
-        for my $other_side ( @{ $OTHER_SIDES{ $side } } ) {
-            my $side_change = ($relative_shade{$side} - $relative_shade{$other_side}) * $change;
-            my @new_rgb = map { List::Util::max(List::Util::min($_ + $side_change, 255), 0) } @rgb;
-            $self->cube_brush->{ $other_side }->SetColour(Wx::Colour->new(@new_rgb));
+        # change the cube colors of the unselected sides to be shades of the current side
+        my @other_shades = $self->find_shades($self->current_side);
+
+        # set the shades as the cube colors for the other sides
+        for my $other_side ( @{ $OTHER_SIDES{ $self->current_side } } ) {
+            my $new_rgb = shift @other_shades;
+            $self->cube_brush->{ $other_side }->SetColour(Wx::Colour->new(@{ $new_rgb }));
             $self->update_scene_color($other_side);
         }
 
         # revert to paint
         $action = $AC_PAINT;
+    }
+    elsif ($action eq $AC_SHADE_CUBE) {
+
+        # fill in the missing pieces of the cube of which the current tile is part.
     }
     elsif ($action =~ /\A(?:$AC_LIGHTEN|$AC_DARKEN)\z/) {
 
@@ -509,6 +508,8 @@ sub change_action { #{{{1
     $self->action($action);
     $self->canvas->set_cursor;
     $self->Refresh;
+
+    $log->debug("done change_action $action");
 
     return;
 }
@@ -727,6 +728,28 @@ sub find_cube_side { #{{{1
 }
 
 ################################################################################
+# change the other sides of the cube to be shades of the specified side. A different
+# base colour can be specified (as a brush index), otherwise the current side color will be used.
+sub find_shades { #{{{1
+    my ($self, $side, $brush_index) = @_;
+
+    my $brush = defined $brush_index 
+        ? $self->canvas->palette->[$brush_index]
+        : $self->cube_brush->{ $side };
+    my $colour = $brush->GetColour;
+    my @rgb = ($colour->Red, $colour->Green, $colour->Blue);
+    my $change = wxTheApp->config->shade_change;
+    my %relative_shade = split ',', wxTheApp->config->relative_shades;
+    my @shades = ();
+    for my $other_side ( @{ $OTHER_SIDES{ $side } } ) {
+        my $side_change = ($relative_shade{$side} - $relative_shade{$other_side}) * $change;
+        push @shades, [ map { List::Util::max(List::Util::min($_ + $side_change, 255), 0) } @rgb ];
+    }
+
+    return @shades;
+}
+
+################################################################################
 sub cube_click { #{{{1
     my ($self) = @_;
 
@@ -865,7 +888,7 @@ sub current_side { #{{{1
         $self->mode_btn->{$MO_AREA}->Refresh;
 
         # switch the images on the action buttons
-        for my $action ($AC_PAINT, $AC_SAMPLE, $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE) {
+        for my $action ($AC_PAINT, $AC_SAMPLE, $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE, $AC_SHADE_CUBE) {
             IsoApp::set_button_bitmap($self->action_btn->{$action}, "action_${action}_$side");
             $self->action_btn->{$action}->Refresh;
         }

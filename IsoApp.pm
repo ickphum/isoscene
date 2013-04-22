@@ -35,7 +35,7 @@ sub new { # {{{1
     $self->xrc->Load('choose_branch.xrc');
     $self->xrc->Load('message_pane.xrc');
 
-    my @images = qw(cube menu paint sample import erase
+    my @images = qw(cube menu paint sample import erase shade_cube
         undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
