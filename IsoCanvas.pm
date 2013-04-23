@@ -1922,21 +1922,26 @@ sub export_scene { #{{{1
     }
     else {
 
-        # doc sizes in inches, in portrait
-        my $sheet_size_inches = {
-            a3_rbn => [ 11.69, 16.54 ],
-            a4_rbn => [ 8.27, 11.69 ],
-            a5_rbn => [ 5.83, 8.27 ],
+        # doc sizes in mm, in portrait and allowing for 5mm non-printable area
+        my $sheet_size_mm = {
+            a2_rbn => [ 410, 584 ],
+            a3_rbn => [ 287, 410 ],
+            a4_rbn => [ 200, 287 ],
+            a5_rbn => [ 138, 200 ],
         };
 
-        my ($selected_sheet_rbn) = grep { $export_option->{$_} } qw(a3_rbn a4_rbn a5_rbn);
+        my ($selected_sheet_rbn) = grep { $export_option->{$_} } qw(a2_rbn a3_rbn a4_rbn a5_rbn);
 
-        my @dims = @{ $sheet_size_inches->{ $selected_sheet_rbn } };
+        my @dims = @{ $sheet_size_mm->{ $selected_sheet_rbn } };
         @dims = reverse @dims if $export_option->{landscape_chb};
 
-        my $dpi = $export_option->{dpi_600_rbn} ? 600 : 300;
+        my $dpi = $export_option->{dpi_600_rbn}
+            ? 600
+            : $export_option->{dpi_300_rbn}
+                ? 300
+                : 150;
 
-        ($width, $height) = (int($dims[0] * $dpi), int($dims[1] * $dpi));
+        ($width, $height) = (int($dims[0] / 25.4 * $dpi ), int($dims[1] / 25.4 * $dpi));
     }
 
     $log->info("top left $min_x,$min_y to bottom right $max_x,$max_y, bitmap dims $width x $height");
@@ -2089,6 +2094,7 @@ sub undo_or_redo { #{{{1
     if ($action eq $erase_action) {
         for my $tile ( @{ $tiles } ) {
             my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+            $log->debug("undo/redo: erase $grid_key");
             delete $self->scene->grid->{$grid_key};
         }
     }
@@ -2096,6 +2102,7 @@ sub undo_or_redo { #{{{1
         for my $tile ( @{ $tiles } ) {
             my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
             $self->scene->grid->{$grid_key} = $tile;
+            $log->debug("undo/redo: paint $grid_key");
             push @{ $self->tile_cache }, $grid_key;
         }
     }
