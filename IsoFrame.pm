@@ -20,13 +20,14 @@ use File::Copy;
 use English qw(-no_match_vars);
 
 use IsoCanvas;
+use IsoGlCanvas;
 use IsoPasteSelector;
 #use IsoExportOptions;
 
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    tool_panel canvas branch_choice_pnl message_pnl export_options_pnl
+    tool_panel canvas gl_canvas branch_choice_pnl message_pnl export_options_pnl
 
     mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -117,7 +118,7 @@ sub new { #{{{1
     my ($class, $scene, $parent, $title, $pos, $size) = @_;
 
     $title  ||= "IsoScene"                      unless defined $title;
-    $pos    = $scene->position || [ 300, 300]   unless defined $pos;
+    $pos    = $scene->position || [ 1300, 300]   unless defined $pos;
     $size   = $scene->size     || [ 700, 700]   unless defined $size;
 
     my $self = $class->SUPER::new( $parent, -1, $title, $pos, $size);
@@ -371,6 +372,7 @@ sub new { #{{{1
     $self->current_side($SI_RIGHT);
 
     $self->canvas(IsoCanvas->new($self, $scene));
+    $self->gl_canvas(IsoGlCanvas->new($self, $scene));
     $log->debug("canvas built ok");
 
     # fix redo button in case we saved on a branch point
@@ -379,6 +381,7 @@ sub new { #{{{1
     my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
 
     $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
+    $canvas_side_sizer->Add($self->gl_canvas, 1, wxEXPAND );
 
     # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
@@ -507,6 +510,7 @@ sub change_action { #{{{1
 
     $self->action($action);
     $self->canvas->set_cursor;
+    $self->gl_canvas->set_cursor;
     $self->Refresh;
 
     $log->debug("done change_action $action");
@@ -598,6 +602,7 @@ sub do_menu_choice { #{{{1
 
         $self->action($AC_IMPORT);
         $self->canvas->set_cursor;
+        $self->gl_canvas->set_cursor;
         $self->Refresh;
     }
     elsif ($string =~ /$MI_SCENE_OPTIONS:(.*)/) {
@@ -685,6 +690,7 @@ sub change_mode { #{{{1
     $self->mode($new_mode);
 
     $self->canvas->set_cursor;
+    $self->gl_canvas->set_cursor;
 
     return;
 }
@@ -787,6 +793,7 @@ sub change_side_colour { #{{{1
     $self->current_side($side);
     $self->action($AC_PAINT);
     $self->canvas->set_cursor;
+    $self->gl_canvas->set_cursor;
 
     $brush->SetColour($colour);
     $self->update_scene_color($side);

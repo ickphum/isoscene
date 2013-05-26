@@ -75,6 +75,7 @@ sub new { # {{{1
         }
 
         $scene = Load($unzipped_yaml);
+        $log->info("loaded scene with this many tiles: " . scalar keys %{ $scene->{grid} });
     }
     else {
         $scene = $default_scene;
