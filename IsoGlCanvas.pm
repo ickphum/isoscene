@@ -598,7 +598,7 @@ sub mouse_event_handler { #{{{1
 
     my ($logical_x, $logical_y) = ( int($device_x * $self->scene->scale - $self->scene->origin_x),
         int($device_y * $self->scene->scale - $self->scene->origin_y));
-    $log->info("logical_x, logical_y = $logical_x, $logical_y");
+    $log->debug("logical_x, logical_y = $logical_x, $logical_y, origin = " . $self->scene->origin_x . ',' . $self->scene->origin_y);
 
     my ($left, $top, $right, $facing) = $self->find_triangle_coords($logical_x, $logical_y);
     $self->current_location([ $left, $top, $right, $facing ]);
@@ -899,24 +899,28 @@ sub mouse_event_handler { #{{{1
     # wheel zooms in/out
     if ($event_flags & ($ME_WHEEL_FORWARD | $ME_WHEEL_BACK)) {
         my $scale = $self->scene->scale;
+        my $scale_factor;
         if ($event_flags & $ME_WHEEL_BACK) {
 
-            # reset to int 1 when coming back up from fractional end of range
-            $scale *= 2 if $scale < 4;
-            $scale = 1 if ($scale > 0.9 && $scale < 1.1);
-            $log->info("wheel back, scale * 2 now $scale");
+            $scale_factor = 2 if $scale < 4;
+            $log->debug("wheel back, scale_factor " . ($scale_factor || 'undef'));
         }
         else {
-            $scale /= 2 if $scale > 0.05;
-            $log->info("wheel forward, scale / 2 now $scale");
+            $scale_factor = 0.5 if $scale > 0.05;
+            $log->debug("wheel forward, scale_factor " . ($scale_factor || 'undef'));
         }
-        $self->scene->scale($scale);
-#        $self->scene->origin_x($self->scene->origin_x - $logical_x);
-#        $self->scene->origin_y($self->scene->origin_y - $logical_y);
-#        $self->scene->origin_x(0);
-#        $self->scene->origin_y(0);
-        $self->tile_cache(0);
-        $refresh = 1;
+        if (defined $scale_factor) {
+            $scale *= $scale_factor;
+
+            # reset to int 1 when coming back up from fractional end of range
+            $scale = 1 if ($scale > 0.9 && $scale < 1.1);
+
+            $self->scene->scale($scale);
+            $self->scene->origin_x($scale_factor * ($self->scene->origin_x + $logical_x) - $logical_x);
+            $self->scene->origin_y($scale_factor * ($self->scene->origin_y + $logical_y) - $logical_y);
+            $self->tile_cache(0);
+            $refresh = 1;
+        }
     }
 
     # motion while dragging moves origin

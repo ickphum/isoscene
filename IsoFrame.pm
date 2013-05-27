@@ -537,6 +537,7 @@ sub do_menu_choice { #{{{1
         $app->scene->save;
         $app->scene( IsoScene->new() );
         $self->canvas->scene($app->scene);
+        $self->gl_canvas->scene($app->scene);
         $self->canvas->set_undo_redo_button_states;
         $app->set_frame_title;
         $self->Refresh;
