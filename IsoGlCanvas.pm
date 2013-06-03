@@ -17,13 +17,13 @@ use base qw(Wx::GLCanvas Class::Accessor::Fast);
 use Wx qw[:everything];
 use Math::Trig;
 use Data::Dumper;
-use POSIX qw(floor);
+use POSIX qw(floor ceil);
 use List::Util qw(min max);
 use Time::Piece;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Math::Geometry::Planar;
 
-# accessors & globals {{{1
+# accessors {{{1
 
 __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
     x_grid_size y_grid_size control_gradient
@@ -43,8 +43,10 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
 
     tile_cache
 
-    vertex_array
+    render_group texture_id init
     ));
+
+# globals {{{1
 
 # bitmap flags to describe the nature of a mouse event
 our (
@@ -211,6 +213,8 @@ my $Shape_extent = {
 # once the grid size is defined.
 my $Tile_shape;
 
+my @Triangles;
+
 ################################################################################
 # Constructor.
 sub new { #{{{1
@@ -288,58 +292,62 @@ sub new { #{{{1
         }
     );
 
-    $self->calculate_grid_dims(120);
+    $self->calculate_grid_dims(57.735);
 
     $self->SetBackgroundStyle(wxBG_STYLE_CUSTOM);
 
-    my @data = ();
-    my $dim = 9;
+    my $dim = 2;
     for my $row (0 .. $dim) {
         for my $col (0 .. $dim) {
-            push @data, $row * 10, $col * 10;
-            push @data, $row * 10 + 5, $col * 10;
-            push @data, $row * 10, $col * 10 + 5;
+            push @Triangles, [ $col, $row ];
         }
     }
-    $log->info("data " . Dumper(\@data));
-    $self->vertex_array( OpenGL::Array->new_list(GL_FLOAT,@data) );
+
+    $self->render_group({});
 
     # not working for me...
 #    my @vbo = glGenBuffersARB_p(1);
 #    $log->info("vbo @vbo");
 #    die "unable to allocate VBOs\n" if (!scalar(@vbo) || !$vbo[0]);
-#    $self->vertex_array->bind(1);
-#    glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->vertex_array, GL_STATIC_DRAW_ARB);
+#    $self->tile_va->bind(1);
+#    glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->tile_va, GL_STATIC_DRAW_ARB);
 
     return $self;
 }
 
 ################################################################################
 
-sub InitGL { # {{{2
+sub InitGL { # {{{1
     my $self = shift;
 
     return if $self->init;
     return unless $self->GetContext;
     $self->init( 1 );
 
-    my @textures = @{ wxTheApp->texture_names };
+    my @textures = qw(texture font_black);
 
     my @texture_ids = glGenTextures_p(scalar @textures);
     $self->texture_id({});
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-    glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#    glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE);
+    glEnable( GL_TEXTURE_2D );
 
     for my $index (0 .. $#textures) {
 
-        my $img = new OpenGL::Image( source=> 'images/' . $textures[$index] . '.tga' );
+        my $texture_name = $textures[$index];
+        my $texture_path = "images/$texture_name.tga";
+        $log->logdie("no texture at $texture_path")
+            unless -f $texture_path;
+        $log->info("load texture from $texture_path");
+        my $img = new OpenGL::Image( source=> $texture_path);
         my @image_info = $img->Get(qw(gl_internalformat width height gl_format gl_type));
         my $Tex_Pixels = $img->GetArray();
 
         glBindTexture(GL_TEXTURE_2D, $texture_ids[$index]);
-        $self->texture_id->{$textures[$index]} = $texture_ids[$index];
+        $self->texture_id->{$texture_name} = $texture_ids[$index];
 
         # The GLU library helps us build MipMaps for our texture.
         if ((my $gluerr = gluBuild2DMipmaps_c(GL_TEXTURE_2D, @image_info, $Tex_Pixels->ptr()))) {
@@ -349,36 +357,36 @@ sub InitGL { # {{{2
     }
 
     # clockwise winding = front face
-    glFrontFace(GL_CW);
-
-    glDepthFunc( GL_LESS );
-    glEnable( GL_DEPTH_TEST );
-    glEnable( GL_BLEND );
-    glEnable( GL_NORMALIZE );
-
-    # smooth is the default
-#    glShadeModel(GL_FLAT);
-
-    glEnable( GL_LIGHTING );
-#    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 1, 1, 1, 1);
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
-
-    glLightfv_p(GL_LIGHT0,GL_AMBIENT, 0.3, 0.3, 0.3, 1);
-    glLightfv_p(GL_LIGHT0,GL_DIFFUSE, 0.9, 0.9, 0.9, 1);
-
-    glMaterialfv_p(GL_FRONT, GL_SPECULAR, 1, 1, 1, 1);
-    glMateriali(GL_FRONT, GL_SHININESS, 128);
-
-    glEnable(GL_LIGHT0);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glSelectBuffer_c($self->select_buffer_len, $self->select_buffer_c->ptr());
+#    glFrontFace(GL_CW);
+#
+#    glDepthFunc( GL_LESS );
+#    glEnable( GL_DEPTH_TEST );
+#    glEnable( GL_BLEND );
+#    glEnable( GL_NORMALIZE );
+#
+#    # smooth is the default
+##    glShadeModel(GL_FLAT);
+#
+#    glEnable( GL_LIGHTING );
+##    glLightModelfv_p(GL_LIGHT_MODEL_AMBIENT, 1, 1, 1, 1);
+#    glEnable(GL_COLOR_MATERIAL);
+#    glColorMaterial(GL_FRONT,GL_AMBIENT_AND_DIFFUSE);
+#
+#    glLightfv_p(GL_LIGHT0,GL_AMBIENT, 0.3, 0.3, 0.3, 1);
+#    glLightfv_p(GL_LIGHT0,GL_DIFFUSE, 0.9, 0.9, 0.9, 1);
+#
+#    glMaterialfv_p(GL_FRONT, GL_SPECULAR, 1, 1, 1, 1);
+#    glMateriali(GL_FRONT, GL_SHININESS, 128);
+#
+#    glEnable(GL_LIGHT0);
+#
+#    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#    glSelectBuffer_c($self->select_buffer_len, $self->select_buffer_c->ptr());
 }
 
 ################################################################################
 
-sub GetContext { # {{{2
+sub GetContext { # {{{1
     my( $self ) = @_;
 
     if( Wx::wxVERSION >= 2.009 ) {
@@ -390,7 +398,7 @@ sub GetContext { # {{{2
 
 ################################################################################
 
-sub SetCurrent { # {{{2
+sub SetCurrent { # {{{1
     my( $self, $context ) = @_;
 
     if( Wx::wxVERSION >= 2.009 ) {
@@ -402,7 +410,7 @@ sub SetCurrent { # {{{2
 
 ################################################################################
 
-sub Resize { # {{{2
+sub Resize { # {{{1
     my( $self, $event ) = @_;
 
     my ($width, $height) = $self->GetSizeWH;
@@ -421,16 +429,216 @@ sub Resize { # {{{2
     $self->SetCurrent( $self->GetContext );
     glViewport( 0, 0, $width, $height );
 
+    $self->calculate_grid_points;
+}
+################################################################################
+
+sub render_text_string { #{{{1
+    my ($self, $string, $base, $char_height, $char_width) = @_;
+
+    for my $char ($string =~ /(.)/g) {
+        my $ord = ord($char);
+
+        my $row = int($ord / 16);
+        my $col = $ord % 16;
+        # $log->info("char $char, ord $ord, row $row, col $col");
+
+        # position of bottom left triangle
+        $self->add_render_group_data('text', 'vertex',
+            $base->[0], $base->[1],
+            $base->[0] + $char_width, $base->[1],
+            $base->[0], $base->[1] + $char_height);
+
+        # texture for bottom left triangle
+        $self->add_render_group_data('text', 'texture',
+            $col/16,$row/16, ($col+1)/16,$row/16, $col/16,($row+1)/16);
+
+        # position of top right triangle
+        $self->add_render_group_data('text', 'vertex',
+            $base->[0] + $char_width, $base->[1],
+            $base->[0] + $char_width, $base->[1] + $char_height,
+            $base->[0], $base->[1] + $char_height);
+
+        # texture for top right triangle
+        $self->add_render_group_data('text', 'texture',
+            ($col+1)/16,$row/16, ($col+1)/16,($row+1)/16, $col/16,($row+1)/16);
+
+        # move the base along
+        $base->[0] += $char_width;
+    }
+
+    return;
 }
 
 ################################################################################
 
-sub Render { # {{{2
+sub calculate_grid_points { #{{{1
+    my ($self) = @_;
+
+    my ($width, $height) = $self->GetSizeWH;
+
+    my $logical_width = $width * $self->scene->scale;
+    my $logical_height = $height * $self->scene->scale;
+    my $logical_origin_x = 0 - $self->scene->origin_x;
+    my $logical_origin_y = 0 - $self->scene->origin_y;
+    $log->debug("logical_origin $logical_origin_x, $logical_origin_y");
+
+    $self->init_render_group('grid');
+
+    my $grid_points = $self->render_group->{grid}->{vertex}->{data}; 
+
+    my $min_x_grid = floor($logical_origin_x / ($self->x_grid_size * 2));
+    my $max_x_grid = ceil(($logical_origin_x + $logical_width) / ($self->x_grid_size * 2));
+    my $min_x = $min_x_grid * $self->x_grid_size * 2;
+    my $max_x = $max_x_grid * $self->x_grid_size * 2;
+    $log->debug("min_x $min_x, max_x $max_x");
+
+    my $min_y = floor($logical_origin_y / $self->y_grid_size) * $self->y_grid_size;
+    $log->debug("min_y $min_y");
+
+    my $next_x_pos = $min_x;
+    while ($next_x_pos < $logical_origin_x + $logical_width) {
+        push @{ $grid_points }, $next_x_pos, $logical_origin_y, $next_x_pos, $logical_origin_y + $logical_height;
+        $next_x_pos += $self->x_grid_size;
+    }
+
+    # drop/rise across the width between the x min & max grid lines
+    my $y_slope = ($max_x_grid - $min_x_grid) * $self->y_grid_size;
+
+    my $y_inc = 0;
+
+    # first loop; lines start at min y grid & move up until the line start is
+    # above the top of the graph
+    while ($min_y + $y_inc < $logical_origin_y + $logical_height) {
+
+        # right axes
+        push @{ $grid_points }, $min_x, $min_y + $y_inc, $max_x, $min_y + $y_inc + $y_slope;
+
+        # reverse x coords for left axes
+        push @{ $grid_points }, $max_x, $min_y + $y_inc, $min_x, $min_y + $y_inc + $y_slope;
+
+        $y_inc += $self->y_grid_size;
+    }
+
+    # second loop; lines start 1 grid below min y grid (we've already drawn the axes
+    # starting at min) and move down until the line end is below the bottom of the graph.
+    # right & left axes done as above.
+    $y_inc = -$self->y_grid_size;
+    while ($min_y + $y_inc + $y_slope > $logical_origin_y) {
+        push @{ $grid_points }, $min_x, $min_y + $y_inc, $max_x, $min_y + $y_inc + $y_slope;
+        push @{ $grid_points }, $max_x, $min_y + $y_inc, $min_x, $min_y + $y_inc + $y_slope;
+        $y_inc -= $self->y_grid_size;
+    }
+ 
+    $self->make_render_group_arrays('grid');
+}
+
+################################################################################
+sub init_render_group { #{{{1
+    my ($self, $group_id) = @_;
+
+    for my $array_type (qw(vertex color texture)) {
+        $self->render_group->{$group_id}->{$array_type}->{data} = [];
+        delete $self->render_group->{$group_id}->{$array_type}->{array};
+    }
+
+    return;
+}
+
+################################################################################
+sub make_render_group_arrays { #{{{1
+    my ($self, $group_id) = @_;
+
+    my %array_info = (
+        vertex => {
+            group_size => 2,
+            type => GL_FLOAT,
+        },
+        texture => {
+            group_size => 2,
+            type => GL_FLOAT,
+        },
+        color => {
+            group_size => 3,
+            type => GL_BYTE,
+        },
+    );
+
+    # size from vertex list, textures and colors must match if present
+    my $number_vertices = scalar @{ $self->render_group->{$group_id}->{vertex}->{data} } / $array_info{vertex}->{group_size};
+    $log->info("made $number_vertices vertices for $group_id");
+
+    for my $array_type (qw(vertex color texture)) {
+        my $data = $self->render_group->{$group_id}->{$array_type}->{data};
+        my $info = $array_info{$array_type};
+        next unless my $number_values = scalar @{ $data };
+        if ($array_type ne 'vertex') {
+            my $number_elements = $number_values / $info->{group_size};
+            $log->logdie("bad data size for $group_id $array_type; found $number_elements, need $number_vertices")
+                if $number_elements != $number_vertices;
+            $log->info("made $number_elements $array_type elements for $group_id");
+        }
+        $self->render_group->{$group_id}->{$array_type}->{array} = OpenGL::Array->new_list($info->{type}, @{ $data });
+    }
+
+    # save this for the glDrawArrays call
+    $self->render_group->{$group_id}->{number_vertices} = $number_vertices;
+
+    return;
+}
+
+################################################################################
+sub add_render_group_data { #{{{1
+    my ($self, $group_id, $array_type, @data) = @_;
+
+    push @{ $self->render_group->{$group_id}->{$array_type}->{data} }, @data;
+
+    return;
+}
+
+################################################################################
+
+sub Render { # {{{1
     my( $self, $name_range_mask ) = @_;
 
     return unless $self->GetContext;
     $self->SetCurrent( $self->GetContext );
-#    $self->InitGL unless $self->init;
+    $self->InitGL unless $self->init;
+
+    my $spacing = 10;
+    $self->init_render_group('permanent');
+    $self->init_render_group('text');
+    for my $triangle (@Triangles) {
+        my ($col, $row) = @{ $triangle };
+
+        # no texture data required here, this array is drawn without texture data
+
+        $self->add_render_group_data('permanent', 'vertex',
+            $col * $spacing, $row * $spacing,
+            $col * $spacing + $spacing / 2, $row * $spacing,
+            $col * $spacing, $row * $spacing + $spacing / 2);
+
+        $self->add_render_group_data('permanent', 'color',
+            $col * 30, $row * 30, 0,
+            $col * 30, $row * 30, 0,
+            $col * 30, $row * 30, 0);
+
+#        $self->render_text_string("$col,$row", [ $col * $spacing, $row * $spacing ], 8, 8);
+
+    }
+
+    $self->make_render_group_arrays('permanent');
+
+    for my $left (-5 .. 5) {
+        for my $top (-5 .. 5) {
+            my $x = $top * $self->x_grid_size;
+            my $y = ($left + $top / 2) * $self->y_grid_size;
+            my $right = $left + $top;
+            $self->render_text_string("$left,$top,$right", [ $x,$y ], 8, 8);
+        }
+    }
+
+    $self->make_render_group_arrays('text');
 
     my ($width, $height) = $self->GetSizeWH;
     glMatrixMode(GL_PROJECTION);
@@ -442,29 +650,170 @@ sub Render { # {{{2
     glTranslatef( $self->scene->origin_x,$self->scene->origin_y,0 );
  #   glScalef( $self->scene->scale,$self->scene->scale, 1);
 
+    # Rendering passes & arrays:
+    # Permanent tiles - vertex & color
+    #   Rebuilt on every committed change, eg single tile paint, completion of area paint or paste, any deletion
+    # Transient tiles - vertex & color (area paint, pasting)
+    #   Rebuilt on change of area (paint) or anchor (paste)
+    # Grid - vertex (may come before tiles)
+    #   Rebuilt on resize or zoom (working now)
+    # Permanent tile images (select markers) & text - vertex & texture
+    #   As for permanent tiles
+    # Transient tile images
+    #   As for transient tiles
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    my $app = wxTheApp;
-
-#    glBegin(GL_TRIANGLES);
-#    glVertex3f(0,0,0);
-#    glVertex3f(5,0,0);
-#    glVertex3f(0,5,0);
-#    glEnd;
-
-    # draw from VA, maybe with VBO if we've bound a buffer
-    $log->debug("draw vertices: " . ($self->vertex_array->elements / 2));
-
-    # 2 because we're not supplying z coords
-    glVertexPointer_p(2, $self->vertex_array);
+    # display the tile set
+    # must disable textures to have color have an effect
+    glDisable( GL_TEXTURE_2D );
 
     glEnableClientState(GL_VERTEX_ARRAY);
-    glDrawArrays(GL_TRIANGLES, 0, $self->vertex_array->elements / 2);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    glVertexPointer_p(2, $self->render_group->{permanent}->{vertex}->{array});
+    glColorPointer_p(3, $self->render_group->{permanent}->{color}->{array});
+
+    glDrawArrays(GL_TRIANGLES, 0, $self->render_group->{permanent}->{number_vertices});
+#    glDrawElements_p(GL_TRIANGLES,0 .. 23);
+
+    glDisableClientState(GL_COLOR_ARRAY);
+
+    # display the grid
+    glVertexPointer_p(2, $self->render_group->{grid}->{vertex}->{array});
+    glDrawArrays(GL_LINES, 0, $self->render_group->{grid}->{number_vertices});
+
+    # enable textures for text display
+    glEnable( GL_TEXTURE_2D );
+    glBindTexture(GL_TEXTURE_2D, $self->texture_id->{font_black});
+
+    glVertexPointer_p(2, $self->render_group->{text}->{vertex}->{array});
+    glTexCoordPointer_p(2, $self->render_group->{text}->{texture}->{array});
+
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDrawArrays(GL_TRIANGLES, 0, $self->render_group->{text}->{number_vertices});
     glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+#    glBindTexture(GL_TEXTURE_2D, $self->texture_id->{texture});
+#    glBegin(GL_TRIANGLES);
+#    glTexCoord2f(0,0);
+#    glVertex2f(0,0);
+#    glTexCoord2f(1,0);
+#    glVertex2f(5,0);
+#    glTexCoord2f(0,1);
+#    glVertex2f(0,5);
+#    glEnd;
+#
+#    glBegin(GL_LINES);
+#    glVertex2f(0,0);
+#    glVertex2f(10,10);
+#    glVertex2f(10,10);
+#    glVertex2f(10,0);
+#    glEnd;
+
     $self->SwapBuffers();
 
     return;
 }
+
+################################################################################
+#sub refresh_tile_array { #{{{1
+#    my ($self, $array_id) = @_;
+#
+#    my @vertices = ();
+#    my @colors = ();
+#
+#    for my $grid_key (keys %{ $permanent ? $self->scene->grid : $self->selected_tile }) {
+#
+##            $log->info("paint $grid_key");
+#        my $tile = $self->scene->grid->{$grid_key};
+#
+#        # skip this stuff for temporary tiles
+#        if ($permanent) {
+#
+#            # filter deleted items when deleting area
+#            next if $self->deleted_tile->{$grid_key};
+#
+#            # individual deleted tiles will still be in the key list but won't be found
+#            next unless $tile;
+#
+##            # if we don't have a tile cache, filter by visible location and
+##            # build the new cache
+##            unless ($self->tile_cache) {
+##                next if $tile->{top} < ($self->min_x_grid - 1) || $tile->{top} > $self->max_x_grid;
+##                my $y_grid = ($tile->{left} + $tile->{right}) / 2;
+##                next if $y_grid < $self->min_y_grid || $y_grid > $self->max_y_grid;
+##
+##                push @new_cache, $grid_key;
+##            }
+#        }
+#
+##        $log->debug(sprintf "draw $tile->{shape} $grid_key at %f, %f",
+##            $tile->{top} * $self->x_grid_size,
+##            ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size);
+#
+#        $dc->SetBrush($palette->[ $tile->{brush_index} ]);
+#
+#        if ($tile_border eq $TB_MATCHING_TILE) {
+#            $dc->SetPen(Wx::Pen->new($dc->GetBrush->GetColour,1,wxPENSTYLE_SOLID));
+#        }
+#
+#        my $shape = $Tile_shape->{ $tile->{shape} }
+#            or $log->logdie("bad tile shape $tile->{shape}");
+#
+#        my @anchor = (
+#            $tile->{top} * $self->x_grid_size,
+#            ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size,
+#        );
+#        $dc->DrawPolygon( $shape->{polygon_points}, @anchor);
+#
+#        if ($config->display_palette_index || $config->display_color || $config->display_key) {
+#
+#            my @strings = (
+#                $config->display_palette_index ? $tile->{brush_index} : '',
+#                $config->display_color ? $self->scene->palette->[ $tile->{brush_index} ] : '',
+#                $config->display_key ? join(':', @{ $tile }{qw(shape left top right)}) : '',
+#            );
+#            $strings[1] =~ s/#//;
+#
+#            my $text_offset = $shape_text_offset{ $tile->{shape} };
+#
+#            # display in 2 colors so we are somewhat readable against any background.
+#            my @colors = (wxBLACK, wxWHITE);
+#            my @fonts = ($big_font, $small_font, $small_font);
+#            for my $string_index (0,1,2) {
+#                next unless length $strings[$string_index];
+#                $dc->SetFont($fonts[$string_index]);
+#                for my $color_index (0,1) {
+#                    $dc->SetTextForeground($colors[$color_index]);
+#                    $dc->DrawText($strings[$string_index],
+#                        $anchor[0] + 10 - $string_index + $text_offset->[0], 
+#                        $anchor[1] + 1 - $string_index + $text_offset->[1] + 23 * $string_index
+#                    );
+#                }
+#            }
+#
+#        }
+#
+#        # draw selected images, including temporary selections (or deselections) during area select
+#        my $part_of_area_select = defined $self->selected_tile->{$grid_key} && $action =~ /select/;
+#        if (($tile->{selected} && ($select_toggle || ! $part_of_area_select || ! $doing_select))
+#            || ($select_toggle && $part_of_area_select) )
+#        {
+#            $dc->DrawBitmap($bitmap->{"tick_$tile->{shape}"},
+#                $tile->{top} * $self->x_grid_size + $tick_offset{$tile->{shape}}->[0],
+#                ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size + $tick_offset{$tile->{shape}}->[1],
+#                1,
+#            );
+#        }
+#    }
+#
+#    $self->vertex_array->{$permanent ? 'permanent' : 'transient'} = OpenGL::Array->new_list(GL_FLOAT,@vertices);
+#    $self->color_array->{$source} = OpenGL::Array->new_list(GL_BYTE,@colors);
+#
+#    return;
+#}
 
 ################################################################################
 sub scene { #{{{1
@@ -574,7 +923,7 @@ sub find_triangle_coords { #{{{1
     $anchor[1] *= $self->y_grid_size;
 
 #    $log->info("pg $point_gradient, cg $control_gradient, min_x $min_x, min_y $min_y, key @key, anchor @anchor, facing $facing");
-    $log->debug("find_triangle_coords $left, $top, $right, $facing");
+    $log->info("find_triangle_coords $left, $top, $right, $facing");
 
 #    @stash = ($min_x, $min_y, @key, @anchor, $facing);
 
@@ -918,6 +1267,7 @@ sub mouse_event_handler { #{{{1
             $self->scene->scale($scale);
             $self->scene->origin_x($scale_factor * ($self->scene->origin_x + $logical_x) - $logical_x);
             $self->scene->origin_y($scale_factor * ($self->scene->origin_y + $logical_y) - $logical_y);
+            $self->calculate_grid_points;
             $self->tile_cache(0);
             $refresh = 1;
         }
@@ -926,6 +1276,7 @@ sub mouse_event_handler { #{{{1
     # motion while dragging moves origin
     if (defined $device_x && $self->dragging) {
         $self->move_origin($device_x, $device_y);
+        $self->calculate_grid_points;
         $refresh = 1;
     }
 
@@ -2415,7 +2766,7 @@ sub move_origin { #{{{1
 
     $self->scene->origin_x ( $self->scene->origin_x - $self->scene->scale * ($self->last_device_x - $device_x));
     $self->scene->origin_y ( $self->scene->origin_y - $self->scene->scale * ($self->last_device_y - $device_y));
-    $log->info(sprintf("origin %d, %d, origin mod grid %d, %d", $self->scene->origin_x, $self->scene->origin_y, $self->scene->origin_x % $self->x_grid_size, $self->scene->origin_y % $self->y_grid_size));
+    $log->debug(sprintf("origin %d, %d, origin mod grid %d, %d", $self->scene->origin_x, $self->scene->origin_y, $self->scene->origin_x % $self->x_grid_size, $self->scene->origin_y % $self->y_grid_size));
 
     $self->tile_cache(0);
 

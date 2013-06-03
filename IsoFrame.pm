@@ -381,7 +381,7 @@ sub new { #{{{1
     my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
 
     $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
-    $canvas_side_sizer->Add($self->gl_canvas, 1, wxEXPAND );
+    $canvas_side_sizer->Add($self->gl_canvas, 3, wxEXPAND );
 
     # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
