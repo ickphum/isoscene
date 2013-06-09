@@ -371,8 +371,8 @@ sub new { #{{{1
     $self->select_mode($AM_CURRENT);
     $self->current_side($SI_RIGHT);
 
-    $self->canvas(IsoCanvas->new($self, $scene));
-    $self->gl_canvas(IsoGlCanvas->new($self, $scene));
+#    $self->canvas(IsoCanvas->new($self, $scene));
+    $self->canvas(IsoGlCanvas->new($self, $scene));
     $log->debug("canvas built ok");
 
     # fix redo button in case we saved on a branch point
@@ -381,7 +381,7 @@ sub new { #{{{1
     my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
 
     $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
-    $canvas_side_sizer->Add($self->gl_canvas, 3, wxEXPAND );
+#    $canvas_side_sizer->Add($self->gl_canvas, 3, wxEXPAND );
 
     # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
@@ -510,7 +510,7 @@ sub change_action { #{{{1
 
     $self->action($action);
     $self->canvas->set_cursor;
-    $self->gl_canvas->set_cursor;
+#    $self->gl_canvas->set_cursor;
     $self->Refresh;
 
     $log->debug("done change_action $action");
@@ -537,7 +537,7 @@ sub do_menu_choice { #{{{1
         $app->scene->save;
         $app->scene( IsoScene->new() );
         $self->canvas->scene($app->scene);
-        $self->gl_canvas->scene($app->scene);
+#        $self->gl_canvas->scene($app->scene);
         $self->canvas->set_undo_redo_button_states;
         $app->set_frame_title;
         $self->Refresh;
@@ -603,7 +603,7 @@ sub do_menu_choice { #{{{1
 
         $self->action($AC_IMPORT);
         $self->canvas->set_cursor;
-        $self->gl_canvas->set_cursor;
+#        $self->gl_canvas->set_cursor;
         $self->Refresh;
     }
     elsif ($string =~ /$MI_SCENE_OPTIONS:(.*)/) {
@@ -691,7 +691,7 @@ sub change_mode { #{{{1
     $self->mode($new_mode);
 
     $self->canvas->set_cursor;
-    $self->gl_canvas->set_cursor;
+#    $self->gl_canvas->set_cursor;
 
     return;
 }
@@ -740,10 +740,14 @@ sub find_cube_side { #{{{1
 sub find_shades { #{{{1
     my ($self, $side, $brush_index) = @_;
 
-    my $brush = defined $brush_index 
-        ? $self->canvas->palette->[$brush_index]
-        : $self->cube_brush->{ $side };
-    my $colour = $brush->GetColour;
+    my $colour;
+    if (defined $brush_index) {
+        my @rgb = @{ $self->canvas->palette->[$brush_index] };
+        $colour = Wx::Colour->new(sprintf("#%02X%02X%02X", @rgb ));
+    }
+    else {
+        $colour = $self->cube_brush->{ $side }->GetColour;
+    }
     my @rgb = ($colour->Red, $colour->Green, $colour->Blue);
     my $change = wxTheApp->config->shade_change;
     my %relative_shade = split ',', wxTheApp->config->relative_shades;
@@ -794,7 +798,7 @@ sub change_side_colour { #{{{1
     $self->current_side($side);
     $self->action($AC_PAINT);
     $self->canvas->set_cursor;
-    $self->gl_canvas->set_cursor;
+#    $self->gl_canvas->set_cursor;
 
     $brush->SetColour($colour);
     $self->update_scene_color($side);
