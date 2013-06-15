@@ -33,7 +33,7 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
     background_brush bg_line_pen tile_line_pen 
     floodfill
     current_location current_grid_key
-    area_start area_tiles deleted_tile select_toggle selected_tile
+    area_start area_tiles select_toggle transient_key
 
     cursor_multiplier_x cursor_multiplier_y action_cursor
 
@@ -763,13 +763,14 @@ sub refresh_tile_array { #{{{1
 
     my %group_source = (
         permanent => $self->scene->grid,
-        transient => $self->selected_tile,
+        transient => $self->transient_key,
     );
 
     my $source = $group_source{$group_id}
         or $log->logdie("no source for group $group_id");
 
     my $palette = $self->palette;
+    my $action = $self->frame->action;
     my %shape_text_offset = (
         $SH_LEFT            => [ 0, -8 ],
         $SH_TOP             => [ 0, 0 ],
@@ -793,7 +794,7 @@ sub refresh_tile_array { #{{{1
         if ($group_id eq 'permanent') {
 
             # filter deleted items when deleting area
-            next if $self->deleted_tile->{$grid_key};
+            next if $action =~ /erase/ && $self->transient_key->{$grid_key};
 
             # individual deleted tiles will still be in the key list but won't be found
             next unless $tile;
@@ -899,8 +900,7 @@ sub scene { #{{{1
         });
 
         $self->area_tiles([]);
-        $self->deleted_tile({});
-        $self->selected_tile({});
+        $self->transient_key({});
         $self->refresh_tile_array('permanent');
     }
 
@@ -981,7 +981,7 @@ sub find_triangle_coords { #{{{1
     $anchor[1] *= $self->y_grid_size;
 
 #    $log->info("pg $point_gradient, cg $control_gradient, min_x $min_x, min_y $min_y, key @key, anchor @anchor, facing $facing");
-#    $log->info("find_triangle_coords $left, $top, $right, $facing");
+    $log->info("find_triangle_coords $left, $top, $right, $facing");
 
 #    @stash = ($min_x, $min_y, @key, @anchor, $facing);
 
@@ -1005,7 +1005,7 @@ sub mouse_event_handler { #{{{1
 
     my ($logical_x, $logical_y) = ( int($device_x * $self->scene->scale - $self->scene->origin_x),
         int($device_y * $self->scene->scale - $self->scene->origin_y));
-    $log->debug("logical_x, logical_y = $logical_x, $logical_y, origin = " . $self->scene->origin_x . ',' . $self->scene->origin_y);
+    # $log->debug("logical_x, logical_y = $logical_x, $logical_y, origin = " . $self->scene->origin_x . ',' . $self->scene->origin_y);
 
     my ($left, $top, $right, $facing) = $self->find_triangle_coords($logical_x, $logical_y);
     $self->current_location([ $left, $top, $right, $facing ]);
@@ -1107,38 +1107,37 @@ sub mouse_event_handler { #{{{1
                     $self->paste_list(undef);
                 }
 
-                $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->selected_tile } ]);
-#                push @{ $self->tile_cache }, keys %{ $self->selected_tile };
-                $self->selected_tile({});
+                $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->transient_key } ]);
+                $self->transient_key({});
                 $frame->Refresh;
             }
 
             if ($mode eq $IsoFrame::MO_AREA) {
                 if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
-                    $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->selected_tile } ]);
-#                    push @{ $self->tile_cache }, keys %{ $self->selected_tile };
-                    $self->selected_tile({});
+                    $self->add_undo_action($IsoFrame::AC_PAINT, [ keys %{ $self->transient_key } ]);
+                    $self->transient_key({});
+                    $refresh = 1;
                 }
                 elsif ($action =~ /erase/) {
 
-                    my @deleted_tiles = keys %{ $self->deleted_tile };
+                    my @deleted_tiles = keys %{ $self->transient_key };
                     $log->debug("deleted_tiles @deleted_tiles");
                     $self->add_undo_action($IsoFrame::AC_ERASE, \@deleted_tiles);
                     for my $key (@deleted_tiles) {
                         delete $self->scene->grid->{$key};
                         $refresh = 1;
                     }
-                    $self->deleted_tile({});
+                    $self->transient_key({});
                 }
                 elsif ($action =~ /select/) {
 
-                    my @selected_tiles = keys %{ $self->selected_tile };
+                    my @selected_tiles = keys %{ $self->transient_key };
                     $log->debug("selected_tiles @selected_tiles");
                     for my $key (@selected_tiles) {
                         $self->scene->grid->{$key}->{selected} = $self->select_toggle;
                         $refresh = 1;
                     }
-                    $self->selected_tile({});
+                    $self->transient_key({});
                 }
                 $self->area_start( undef );
             }
@@ -1169,8 +1168,8 @@ sub mouse_event_handler { #{{{1
                     # the adjustments will make the coords point to the same tile once the facing is changed.
                     my $refacing_adjustments = {
                         $SH_LEFT => {
-                            L => [ -1, 0, -1 ],
-                            R => [ 1, 0, 1 ],
+                            L => [ 1, 0, 1 ],
+                            R => [ -1, 0, -1 ],
                         },
                         $SH_TOP => {
                             L => [ -1, 1, 0 ],
@@ -1192,11 +1191,11 @@ sub mouse_event_handler { #{{{1
             if ($self->area_start) {
 
                 # clear tiles from previous area clear location
-                $self->deleted_tile({});
+                $self->transient_key({});
 
                 # note that erase-all doesn't work easily in area mode; the tiles erased
                 # will depend on the facing of the original tile clicked.
-                $refresh = $self->mark_area($self->deleted_tile, $left, $top, $right, $facing, $paint_shape);
+                $refresh = $self->mark_area($self->transient_key, $left, $top, $right, $facing, $paint_shape);
             }
             else {
                 if (my $tile = $self->find_tile($grid_key)) {
@@ -1224,12 +1223,13 @@ sub mouse_event_handler { #{{{1
             if ($self->area_start) {
 
                 # clear tiles from previous area paint
-                for my $key (keys %{ $self->selected_tile } ) {
+                for my $key (keys %{ $self->transient_key } ) {
                     delete $self->scene->grid->{$key};
                 }
-                $self->selected_tile({});
+                $self->transient_key({});
 
-                $refresh = $self->mark_area($self->selected_tile, $left, $top, $right, $facing, $paint_shape);
+                $refresh = $self->mark_area($self->transient_key, $left, $top, $right, $facing, $paint_shape);
+                $self->refresh_tile_array('permanent');
             }
             else {
 
@@ -1245,12 +1245,12 @@ sub mouse_event_handler { #{{{1
             if ($self->area_start) {
 
                 # clear tiles from previous area paint
-                for my $key (keys %{ $self->selected_tile } ) {
+                for my $key (keys %{ $self->transient_key } ) {
                     delete $self->scene->grid->{$key};
                 }
-                $self->selected_tile({});
+                $self->transient_key({});
 
-                $refresh = $self->mark_area($self->selected_tile, $left, $top, $right, $facing, $paint_shape);
+                $refresh = $self->mark_area($self->transient_key, $left, $top, $right, $facing, $paint_shape);
             }
             else {
 
@@ -1260,17 +1260,17 @@ sub mouse_event_handler { #{{{1
         elsif ($action eq $IsoFrame::AC_PASTE) {
 
             # clear tiles from previous refresh
-            for my $key (keys %{ $self->selected_tile } ) {
+            for my $key (keys %{ $self->transient_key } ) {
                 delete $self->scene->grid->{$key};
             }
-            $self->selected_tile({});
+            $self->transient_key({});
 
             for my $tile ( @{ $self->paste_list } ) {
                 if (my $grid_key = $self->paint_tile($left + $tile->{left}, $top + $tile->{top}, $right + $tile->{right},
                     $tile->{facing}, $tile->{shape}, $tile->{brush_index}))
                 {
                     $refresh = 1;
-                    $self->selected_tile->{$grid_key} = 1;
+                    $self->transient_key->{$grid_key} = 1;
                 }
             }
         }
@@ -1278,9 +1278,9 @@ sub mouse_event_handler { #{{{1
             if ($self->area_start) {
 
                 # clear tiles from previous area
-                $self->selected_tile({});
+                $self->transient_key({});
 
-                $refresh = $self->mark_area($self->selected_tile, $left, $top, $right, $facing, $paint_shape);
+                $refresh = $self->mark_area($self->transient_key, $left, $top, $right, $facing, $paint_shape);
             }
             elsif (my $tile = $self->find_tile($grid_key)) {
                 $log->debug("tile: " . Dumper($tile));
@@ -1338,17 +1338,7 @@ sub mouse_event_handler { #{{{1
         $refresh = 1;
     }
 
-#    $log->debug("refresh from mouse_event_handler") if $refresh;
-#    if (@refresh_corners) {
-#        my $rect = Wx::Rect->new(List::Util::min(@refresh_corners[0,1]) - $self->y_grid_size,
-#            List::Util::min(@refresh_corners[2,3]) - $self->y_grid_size,
-#            abs($refresh_corners[0] - $refresh_corners[1]) + $self->y_grid_size * 2,
-#            abs($refresh_corners[2] - $refresh_corners[3]) + $self->y_grid_size * 2);
-#        $self->RefreshRect($rect);
-#    }
-#    else {
-        $self->Refresh if $refresh;
-#    }
+    $self->Refresh if $refresh;
 
     $self->last_device_x($device_x);
     $self->last_device_y($device_y);
@@ -1456,7 +1446,7 @@ sub mark_area { #{{{1
     my @current = ($left, $top, $right);
 
     my %shape_axes = (
-        L => [ 0,1,2,1,1 ],
+        L => [ 2,1,0,1,-1 ],
         T => [ 0,2,1,-1,1 ],
         R => [ 1,2,0,-1,1 ],
     );
@@ -1498,6 +1488,7 @@ sub mark_area { #{{{1
             $point[ $axes[0] ] = $coord_0;
             $point[ $axes[1] ] = $coord_1;
             $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $coord_1; 
+            $log->info("point $facing @point");
 
             if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
                 if (my $key = $self->paint_tile(@point, $facing, $shape)) {
@@ -1506,6 +1497,8 @@ sub mark_area { #{{{1
 
             }
             else {
+
+                # action is select or erase
 
                 my $grid_key = "${facing}_$point[0]_$point[1]_$point[2]";
                 if (my $tile = $self->find_tile ( $grid_key )) {
@@ -1693,7 +1686,7 @@ sub paint_tile { #{{{1
     $self->scene->grid->{$grid_key} = $tile;
 
     # add to cache on creation unless we're painting an area or pasting,
-    # in which case the selected_tile hash is used in addition to the cache.
+    # in which case the transient_key hash is used in addition to the cache.
     my $action = $self->frame->action;
     unless ($action eq $IsoFrame::AC_PASTE || ($action eq $IsoFrame::AC_PAINT && $self->area_start)) {
         $log->debug("refresh_tile_array");
@@ -2273,7 +2266,7 @@ sub draw_scene { #{{{1
             if ($pass == 0) {
 
                 # filter deleted items when deleting area
-                next if $self->deleted_tile->{$grid_key};
+                next if $self->transient_key->{$grid_key};
 
                 # individual deleted tiles will still be in the key list but won't be found
                 next unless $tile;
