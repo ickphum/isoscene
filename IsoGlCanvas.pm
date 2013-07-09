@@ -33,7 +33,9 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
     background_brush bg_line_pen tile_line_pen 
     floodfill
     current_location current_grid_key
-    area_start area_tiles select_toggle transient_key
+    area_start area_tiles select_toggle 
+    
+    transient_key select_key new_key
 
     cursor_multiplier_x cursor_multiplier_y action_cursor
 
@@ -133,28 +135,28 @@ my %Shape_clashes = (
             ],
         ],
     ],
-#    TL => [
-#
-#        # shift_flag set to 3 so any clash stops the paint; can't
-#        # paint half a triangle.
-#        [ 0,0,0, $SH_TRIANGLE_RIGHT, 3, 
-#            [
-#                [  1, 0, 1, $SH_LEFT, ],
-#                [  0, 0, 0, $SH_TOP, ],
-#                [  0, 0, 0, $SH_RIGHT, ],
-#            ],
-#        ],
-#    ],
-#    TR => [
-#        [ 0,0,0, $SH_TRIANGLE_LEFT, 3,
-#            [
-#                [  0, 0, 0, $SH_LEFT, ],
-#                [  0, 0, 0, $SH_RIGHT, ],
-#                [ -1,-1, 0, $SH_TOP, ],
-#                [  0, 0, 0, $SH_TRIANGLE_RIGHT, ],
-#            ],
-#        ],
-#    ],
+    TL => [
+
+        # shift_flag set to 3 so any clash stops the paint; can't
+        # paint half a triangle.
+        [ 0,0,0, $SH_TRIANGLE_RIGHT, 3, 
+            [
+                [ -1, 0,-1, $SH_LEFT, ],
+                [  0, 0, 0, $SH_TOP, ],
+                [  0, 0, 0, $SH_RIGHT, ],
+            ],
+        ],
+    ],
+    TR => [
+        [ 0,0,0, $SH_TRIANGLE_LEFT, 3,
+            [
+                [  0, 0, 0, $SH_LEFT, ],
+                [  0, 0, 0, $SH_RIGHT, ],
+                [  0,-1, 1, $SH_TOP, ],
+                [  0, 0, 0, $SH_TRIANGLE_RIGHT, ],
+            ],
+        ],
+    ],
 );
 
 # the offsets from the anchor for each shape to the anchors of the other shapes
@@ -178,9 +180,9 @@ my $Cube_side_offset = {
 # of the relevant grid size.
 my $Shape_extent = {
     L => {
-        min_y => 0,
+        min_y => 1.5,
         max_x => 1,
-        max_y => 1.5,
+        max_y => 0,
     },
     T => {
         min_y => 0.5,
@@ -188,9 +190,9 @@ my $Shape_extent = {
         max_y => 0.5,
     },
     R => {
-        min_y => 0.5,
+        min_y => 1,
         max_x => 1,
-        max_y => 1,
+        max_y => 0.5,
     },
     TL => {
         min_y => 0.5,
@@ -198,15 +200,16 @@ my $Shape_extent = {
         max_y => 0.5,
     },
     TR => {
-        min_y => 0,
+        min_y => 1,
         max_x => 1,
-        max_y => 1,
+        max_y => 0,
     },
 };
 
 # This structure defines how to draw each type of tile; it's loaded
 # once the grid size is defined.
 my $Tile_shape;
+my $DC_tile_shape;
 
 # same shapes but scaled and translated for the tick mark area for each shape
 my $Tick_shape;
@@ -577,7 +580,7 @@ sub make_render_group_arrays { #{{{1
     # size from vertex list, textures and colors must match if present
     for my $real_group_id ($group_id, "${group_id}_text", "${group_id}_select") {
         my $number_vertices = scalar @{ $self->render_group->{$real_group_id}->{vertex}->{data} } / $array_info{vertex}->{group_size};
-        # $log->info("made $number_vertices vertices for $real_group_id");
+        $log->info("made $number_vertices vertices for $real_group_id");
 
         for my $array_type (qw(vertex color texture)) {
             my $data = $self->render_group->{$real_group_id}->{$array_type}->{data};
@@ -611,7 +614,7 @@ sub add_render_group_data { #{{{1
 }
 
 ################################################################################
-sub display_render_group { #{{{1
+sub display_render_group { # {{{1
     my ($self, $real_group_id) = @_;
 
     my $render_group = $self->render_group->{$real_group_id};
@@ -621,6 +624,7 @@ sub display_render_group { #{{{1
     }
 
     return unless $render_group->{number_vertices};
+    $log->info("rendering $render_group->{number_vertices} vertices from $real_group_id");
 
     glVertexPointer_p(2, $render_group->{vertex}->{array});
 
@@ -715,6 +719,16 @@ sub Render { # {{{1
     # Transient tile images
     #   As for transient tiles
 
+    # Painted tiles are recorded in new_key and rendered from new group.
+    # We periodically empty new_key and rebuild permanent group.
+    # When a tile is deleted, if it exists in new_key we don't have to refresh permanent.
+    #
+    # New selections are recorded in the tile and in select_key, and we rebuild new_select from select_key.
+    # Note that tiles in new and select markers in new_select don't necessarily correspond.
+    # On unselection, if the tile is recorded in select_key, we remove it from there and rebuild new_select,
+    # otherwise we have to rebuild permanent_select.
+    # We build permanent_select on loading, and periodically empty select_key and rebuild permanent_select.
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnableClientState(GL_VERTEX_ARRAY);
 
@@ -748,6 +762,7 @@ sub Render { # {{{1
 #    glVertex2f(0,5);
 #    glEnd;
 
+    glColor3ub(0xff, 0xff, 0xff);
     glBegin(GL_LINES);
     glVertex2f(1,1);
     glVertex2f(1,-1);
@@ -776,6 +791,7 @@ sub refresh_tile_array { #{{{1
     my %group_source = (
         permanent => $self->scene->grid,
         transient => $self->transient_key,
+        select => $self->select_key,
     );
 
     my $source = $group_source{$group_id}
@@ -824,21 +840,11 @@ sub refresh_tile_array { #{{{1
             # individual deleted tiles will still be in the key list but won't be found
             next unless $tile;
 
-#            # if we don't have a tile cache, filter by visible location and
-#            # build the new cache
-#            unless ($self->tile_cache) {
-#                next if $tile->{top} < ($self->min_x_grid - 1) || $tile->{top} > $self->max_x_grid;
-#                my $y_grid = ($tile->{left} + $tile->{right}) / 2;
-#                next if $y_grid < $self->min_y_grid || $y_grid > $self->max_y_grid;
-#
-#                push @new_cache, $grid_key;
-#            }
         }
 
 #        $log->debug(sprintf "draw $tile->{shape} $grid_key at %f, %f",
 #            $tile->{top} * $self->x_grid_size,
 #            ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size);
-
 
         my $shape = $Tile_shape->{ $tile->{shape} }
             or $log->logdie("bad tile shape $tile->{shape}");
@@ -883,8 +889,8 @@ sub refresh_tile_array { #{{{1
 
         # draw selected images, including temporary selections (or deselections) during area select
         my $part_of_area_select = defined $self->transient_key->{$grid_key} && $action =~ /select/;
-        if (($tile->{selected} && ($select_toggle || ! $part_of_area_select || ! $doing_select))
-            || ($select_toggle && $part_of_area_select) )
+        if ($group_id eq 'permanent' && (($tile->{selected} && ($select_toggle || ! $part_of_area_select || ! $doing_select))
+            || ($select_toggle && $part_of_area_select) ))
         {
             my $tick_shape = $Tick_shape->{ $tile->{shape} }
                 or $log->logdie("no tick shape for shape $tile->{shape}");
@@ -907,7 +913,7 @@ sub refresh_tile_array { #{{{1
 ################################################################################
 # build the array to display the target, ie the standard cursor, the tiles to 
 # be pasted or an enlarged cursor if we're importing.
-sub make_current_target {
+sub make_current_target { #{{{1
     my ($self) = @_;
 
     $self->init_render_group('target');
@@ -1425,7 +1431,7 @@ sub mouse_event_handler { #{{{1
                 $self->transient_key({});
 
                 $refresh = $self->mark_area($self->transient_key, $left, $top, $right, $facing, $paint_shape);
-                $self->refresh_tile_array('permanent');
+                $self->refresh_tile_array('permanent_select');
             }
             elsif (my $tile = $self->find_tile($grid_key)) {
                 $log->debug("tile: " . Dumper($tile));
@@ -1435,7 +1441,7 @@ sub mouse_event_handler { #{{{1
                     || ($action eq $IsoFrame::AC_SELECT_OTHERS && $tile->{shape} ne $paint_shape))
                 {
                     $tile->{selected} = $self->select_toggle;
-                    $self->refresh_tile_array('permanent');
+                    $self->refresh_tile_array('permanent_select');
                     $refresh = 1;
                 }
             }
@@ -1599,6 +1605,7 @@ sub mark_area { #{{{1
     my @axes = @{ $shape_axes{$shape} };
     my @mins = (List::Util::min($start[$axes[0]], $current[$axes[0]]), List::Util::min($start[$axes[1]], $current[$axes[1]]));
     my @maxes = (List::Util::max($start[$axes[0]], $current[$axes[0]]), List::Util::max($start[$axes[1]], $current[$axes[1]]));
+    $log->debug("mins [ @mins ], maxes [ @maxes ]");
 
     my $axis_1_coeff = pop @axes;
     my $axis_0_coeff = pop @axes;
@@ -1688,7 +1695,7 @@ sub mark_area { #{{{1
 
     if ($action eq $IsoFrame::AC_SHADE_CUBE) {
         if ($shape eq $SH_RIGHT) {
-            for my $coord_0 ($mins[0] .. $maxes[0]) {
+            for my $coord_0 (reverse $mins[0] .. $maxes[0]) {
                 $point[ $axes[0] ] = $coord_0;
                 $point[ $axes[1] ] = $mins[1];
                 $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $mins[1]; 
@@ -1696,48 +1703,40 @@ sub mark_area { #{{{1
             }
 
             for my $coord_1 (($mins[1] + 1) .. $maxes[1]) {
-                $point[ $axes[0] ] = $mins[0];
-                $point[ $axes[1] ] = $coord_1;
-                $point[ $axes[2] ] = $axis_0_coeff * $mins[0] + $axis_1_coeff * $coord_1; 
-                $self->shade_cube(@point, $facing, $shape, $marked_hash);
-            }
-        }
-        elsif ($shape eq $SH_LEFT) {
-            for my $coord_0 ($mins[0] .. $maxes[0]) {
-                $point[ $axes[0] ] = $coord_0;
-                $point[ $axes[1] ] = $maxes[1];
-                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $maxes[1]; 
-                $log->info("a");
-                $self->shade_cube(@point, $facing, $shape, $marked_hash);
-            }
-
-            my $coord_1 = $maxes[1] - 1;
-            while ($coord_1 >= $mins[1]) {
-                $point[ $axes[0] ] = $mins[0];
-                $point[ $axes[1] ] = $coord_1;
-                $point[ $axes[2] ] = $axis_0_coeff * $mins[0] + $axis_1_coeff * $coord_1; 
-                $self->shade_cube(@point, $facing, $shape, $marked_hash);
-                $coord_1--;
-                $log->info("b");
-            }
-        }
-        elsif ($shape eq $SH_TOP) {
-            my $coord_0 = $maxes[0];
-            while ( $coord_0 >= $mins[0]) {
-                $point[ $axes[0] ] = $coord_0;
-                $point[ $axes[1] ] = $maxes[1];
-                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $maxes[1]; 
-                $self->shade_cube(@point, $facing, $shape, $marked_hash);
-                $coord_0--;
-            }
-
-            my $coord_1 = $maxes[1] - 1;
-            while ($coord_1 >= $mins[1]) {
                 $point[ $axes[0] ] = $maxes[0];
                 $point[ $axes[1] ] = $coord_1;
                 $point[ $axes[2] ] = $axis_0_coeff * $maxes[0] + $axis_1_coeff * $coord_1; 
                 $self->shade_cube(@point, $facing, $shape, $marked_hash);
-                $coord_1--;
+            }
+        }
+        elsif ($shape eq $SH_LEFT) {
+            for my $coord_0 (reverse $mins[0] .. $maxes[0]) {
+                $point[ $axes[0] ] = $coord_0;
+                $point[ $axes[1] ] = $maxes[1];
+                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $maxes[1]; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+
+            for my $coord_1 (reverse $mins[1] .. $maxes[1]-1) {
+                $point[ $axes[0] ] = $maxes[0];
+                $point[ $axes[1] ] = $coord_1;
+                $point[ $axes[2] ] = $axis_0_coeff * $maxes[0] + $axis_1_coeff * $coord_1; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+        }
+        elsif ($shape eq $SH_TOP) {
+            for my $coord_0 ($mins[0] .. $maxes[0]) {
+                $point[ $axes[0] ] = $coord_0;
+                $point[ $axes[1] ] = $mins[1];
+                $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $mins[1]; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
+            }
+
+            for my $coord_1 ($mins[1] + 1 .. $maxes[1]) {
+                $point[ $axes[0] ] = $mins[0];
+                $point[ $axes[1] ] = $coord_1;
+                $point[ $axes[2] ] = $axis_0_coeff * $mins[0] + $axis_1_coeff * $coord_1; 
+                $self->shade_cube(@point, $facing, $shape, $marked_hash);
             }
         }
     }
@@ -1893,10 +1892,10 @@ sub shade_cube { #{{{1
                     # to the location that would have been used by the tile.
                     my %triangle_delta = (
                         L => {
-                            L => [ -1, 0, -1 ],
+                            L => [ 1, 0, 1 ],
                         },
                         R => {
-                            T => [ 1, -1, 0 ],
+                            T => [ 0, -1, -1 ],
                         }
                     );
                     if (my $delta = $triangle_delta{$tile->{facing}}->{$cube_side}) {
@@ -2104,8 +2103,6 @@ sub clipboard_operation { #{{{1
 
         $thumb_dc->SetPen(wxWHITE_PEN);
 
-        # it's tempting to try to use draw_scene to draw into the dc, but there's
-        # quite a lot of stuff we don't want, and not much we do, so just copy for now.
         my $palette = $self->palette;
 
         # to precisely centre the shape in the image, adjust by the distance from
@@ -2113,11 +2110,16 @@ sub clipboard_operation { #{{{1
         my $x_adjustment = $min_x + (($max_x - $min_x) / 2) - $centre_tile->{x};
         my $y_adjustment = $min_y + (($max_y - $min_y) / 2) - $centre_tile->{y};
 
+        my %brush_cache;
         for my $tile (@clipboard_tiles) {
 
-            $thumb_dc->SetBrush($palette->[ $tile->{brush_index} ]);
+            $log->info("palette at $tile->{brush_index} is " . Dumper($palette->[ $tile->{brush_index} ]));
 
-            my $shape = $Tile_shape->{ $tile->{shape} }
+            # we're still using DC graphics to build the thumbnail; just make brushes as we go
+            $brush_cache{ $tile->{brush_index} } ||= Wx::Brush->new( Wx::Colour->new( @{ $palette->[ $tile->{brush_index} ] } ), wxBRUSHSTYLE_SOLID );
+            $thumb_dc->SetBrush($brush_cache{ $tile->{brush_index} });
+
+            my $shape = $DC_tile_shape->{ $tile->{shape} }
                 or $log->logdie("bad tile shape $tile->{shape}");
 
             $thumb_dc->DrawPolygon(
@@ -2194,6 +2196,55 @@ sub calculate_grid_dims { #{{{1
             [ $x, $y / 2 ],
         ],
     };
+
+    # We still need Wx::Point lists to draw thumbnails for clipboard items;
+    # shapes are converted into Wx::Point lists for use by DrawPolygon below.
+    $DC_tile_shape = {
+        L => {
+            points => [
+                $Tile_shape->{L}->[0],
+                $Tile_shape->{L}->[2],
+                $Tile_shape->{L}->[5],
+                $Tile_shape->{L}->[4],
+            ],
+        },
+        T => {
+            points => [
+                $Tile_shape->{T}->[0],
+                $Tile_shape->{T}->[1],
+                $Tile_shape->{T}->[5],
+                $Tile_shape->{T}->[2],
+            ],
+        },
+        R => {
+            points => [
+                $Tile_shape->{R}->[0],
+                $Tile_shape->{R}->[1],
+                $Tile_shape->{R}->[2],
+                $Tile_shape->{R}->[4],
+            ],
+        },
+        TR => {
+            points => [
+                $Tile_shape->{TR}->[0],
+                $Tile_shape->{TR}->[2],
+                $Tile_shape->{TR}->[1],
+            ],
+        },
+        TL => {
+            points => [
+                $Tile_shape->{TL}->[0],
+                $Tile_shape->{TL}->[2],
+                $Tile_shape->{TL}->[1],
+            ],
+        },
+    };
+    for my $shape (values %{ $DC_tile_shape }) {
+        $shape->{polygon_points} = [];
+        for my $point (@{ $shape->{points} }) {
+            push @{ $shape->{polygon_points} }, Wx::Point->new(@{ $point });
+        }
+    }
 
     # create the vertices for the tick marks by scaling down the tile shapes;
     # also add an offset to position the tick somewhere suitable.
@@ -3080,6 +3131,7 @@ sub set_selection_for_all { #{{{1
     for my $tile (values %{ $self->scene->grid }) {
         $tile->{selected} = $flag;
     }
+    $self->refresh_tile_array('permanent');
     $self->Refresh;
 
     return;
