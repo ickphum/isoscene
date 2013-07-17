@@ -45,6 +45,8 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
 
     tile_cache
 
+    data_hash key_hash vertex_array
+
     render_group texture_id init
     ));
 
@@ -643,7 +645,7 @@ sub display_render_group { # {{{1
 
     if (exists $render_group->{color}->{array}) {
         glDisableClientState(GL_COLOR_ARRAY);
-        glColorPointer_p(3, $render_group->{color}->{array});
+#        glColorPointer_p(3, $render_group->{color}->{array});
     }
     elsif (exists $render_group->{texture}->{array}) {
         glDisable( GL_TEXTURE_2D );
@@ -864,6 +866,7 @@ sub refresh_tile_array { #{{{1
         $self->add_render_group_data($group_id, 'color',
             (@{ $palette->[ $tile->{brush_index} ] }) x $number_shape_vertices{$tile->{shape}} );
 
+        # text for tile?
         if ($config->display_palette_index || $config->display_color || $config->display_key) {
 
             my @strings = (
