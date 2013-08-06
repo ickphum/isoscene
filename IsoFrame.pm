@@ -128,12 +128,21 @@ sub new { #{{{1
     # undo timer
     $self->undo_timer(Wx::Timer->new($self));
     Wx::Event::EVT_TIMER($self, $self->undo_timer->GetId, sub {
-        $self->canvas->undo_or_redo();
+        if ($self->canvas->undo_or_redo()) {
 
-        # the timer is set to a single slow wait period, then switches to fast continuous
-        unless ($self->undo_timer->IsRunning) {
-            $self->undo_timer->Start(wxTheApp->config->undo_repeat_milliseconds, wxTIMER_CONTINUOUS);
+            # may be more events to undo/redo; check the timer.
+            # the timer is set to a single slow wait period, then switches to fast continuous
+            unless ($self->undo_timer->IsRunning) {
+                $self->undo_timer->Start(wxTheApp->config->undo_repeat_milliseconds, wxTIMER_CONTINUOUS);
+            }
         }
+        elsif ($self->undo_timer->IsRunning) {
+
+            # no more events in the relevant queue so stop the timer
+            $log->info("finished undo_or_redo");
+            $self->undo_timer->Stop;
+        }
+
     });
 
     # track size and position continually so we don't need to do it on save
@@ -390,7 +399,7 @@ sub new { #{{{1
 
     Wx::Event::EVT_CHOICE($self, $self->branch_choice_pnl->FindWindow('branch_chc'), \&change_branch_choice);
     Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('ok_btn'), sub { $_[0]->finish_branch_choice(1); } );
-    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_btn'), sub { $_[0]->finish_branch_choice(0); } );
+    Wx::Event::EVT_BUTTON($self, $self->branch_choice_pnl->FindWindow('cancel_choice_btn'), sub { $_[0]->finish_branch_choice(0); } );
 
     # export options panel
     $self->export_options_pnl( $app->xrc->LoadPanel($self, 'export_options_pnl') );
@@ -451,10 +460,8 @@ sub change_action { #{{{1
         $self->canvas->paint_shape(0);
 
         # clear last set of floating tiles
-        for my $key (keys %{ $self->canvas->selected_tile } ) {
-            delete $self->canvas->scene->grid->{$key};
-        }
-        $self->canvas->selected_tile({});
+        $self->canvas->transient_grid({});
+        $self->canvas->rebuild_render_group('transient');
     }
 
     # changing to another action during import cancels the import
@@ -510,7 +517,6 @@ sub change_action { #{{{1
 
     $self->action($action);
     $self->canvas->set_cursor;
-#    $self->gl_canvas->set_cursor;
     $self->Refresh;
 
     $log->debug("done change_action $action");
@@ -969,7 +975,6 @@ sub toggle_tool_panel { #{{{1
     # the canvas widens/narrows depending on the state of the tool panel.
     my $origin_x = $self->canvas->scene->origin_x;
     $self->canvas->scene->origin_x($origin_x + ($hide ? 1 : -1) * $width);
-    $self->canvas->tile_cache(0);
 
     $self->tool_panel->Show(! $hide);
     $self->Layout;

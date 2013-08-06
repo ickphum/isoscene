@@ -56,7 +56,7 @@ sub new { # {{{1
         display_color => 0,
         display_key => 0,
         default_scene_file => 'Start',
-        default_scene_scale => 0.25,
+        default_scene_scale => 0.5,
         default_scene_left_rgb => '#ca9c5b',
         default_scene_top_rgb => '#e8ba79',
         default_scene_right_rgb => '#ac7e3d',
