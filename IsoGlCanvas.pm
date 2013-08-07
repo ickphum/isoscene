@@ -229,7 +229,9 @@ sub new { #{{{1
 
     my $self = $class->SUPER::new( $parent, $id, $pos, $size, 0);
 
-    $self->frame($parent);
+    # if this canvas is in the export frame (so we can resize it to the correct resolution for export),
+    # get all the frame information from the real frame.
+    $self->frame("$parent" =~ /ScrolledWindow/ ? $parent->GetParent->GetParent : $parent);
 
     $self->render_group({});
     for my $group (qw(permanent new transient select)) {
@@ -839,7 +841,7 @@ sub Render { # {{{1
 sub rebuild_render_group { #{{{1
     my ($self, $group_id) = @_;
 
-    $log->info("rebuild_render_group $group_id from " . (caller)[2]);
+    $log->debug("rebuild_render_group $group_id from " . (caller)[2]);
 
     my $config = wxTheApp->config;
 
@@ -899,7 +901,7 @@ sub rebuild_render_group { #{{{1
         }
     }
 
-    $log->info("sources for $group_id : " . Dumper($sources));
+    $log->debug("sources for $group_id : " . Dumper($sources));
 
     # position of text relative to tile anchor
     my %shape_text_offset = (
@@ -2846,6 +2848,48 @@ sub export_scene { #{{{1
     my ($self) = @_;
 
     $log->info("export_scene");
+#  my $w = 128;
+#  my $h = 128;
+#
+#  # Allocate texture buffer
+#  my($TextureID_FBO) = glGenTextures_p(1);
+#
+#  # Allocate FBO frame and render buffers
+#  my($FrameBufferID) = glGenFramebuffersEXT_p(1);
+#  my($RenderBufferID) = glGenRenderbuffersEXT_p(1);
+#
+#  # Bind frame/texture
+#  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, $FrameBufferID);
+#  glBindTexture(GL_TEXTURE_2D, $TextureID_FBO);
+#
+#  # Initiate texture
+#  glTexImage2D_c(GL_TEXTURE_2D, 0, GL_RGBA8, $w, $h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+#  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+#
+#  # Bind frame/render buffers
+#  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, $TextureID_FBO, 0);
+#  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, $RenderBufferID);
+#  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, $w, $h);
+#  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, $RenderBufferID);
+#
+#  # Test status
+#  my $stat = glCheckFramebufferStatusEXT(GL_RENDERBUFFER_EXT);
+#  $log->info(sprintf("Status: %04X\n",$stat));
+#
+#  # Draw to texture
+#  $self->Render;
+#
+#  # Release binding
+#  glBindRenderbufferEXT( GL_RENDERBUFFER_EXT, 0 );
+#  glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
+#
+#  # Delete frame/render buffers
+#  # NOTE: Should cache to improve performance
+#  glDeleteRenderbuffersEXT_p( $RenderBufferID );
+#  glDeleteFramebuffersEXT_p( $FrameBufferID );
+#
+#  return;
 
     my ($width, $height) = $self->GetSizeWH;
     my $image = new OpenGL::Image(width => $width, height => $height);
@@ -2861,7 +2905,7 @@ sub export_scene { #{{{1
     OpenGL::glReadPixels_c(0, 0, $width, $height, $fmt, $size, $image->Ptr());
 
     my $app = wxTheApp;
-    my $filename = 'iso.tga';
+    my $filename = 'export.png';
 
     $image->Save($filename);
     $log->info("saved screenshot to $filename");
@@ -2923,7 +2967,7 @@ sub export_scene { #{{{1
     my $export_option = $self->scene->export_options;
 
     # find bitmap size
-    my ($width, $height); 
+#    my ($width, $height); 
     if ($export_option->{pixels_per_tile_rbn}) {
         my $pixels_per_tile = $export_option->{pixels_per_tile_sld};
         ($width, $height) = (($max_x_grid - $min_x_grid) * $pixels_per_tile, ($max_y_grid - $min_y_grid) * $pixels_per_tile);
@@ -3008,7 +3052,6 @@ sub export_scene { #{{{1
 # action is whatever we've just done, data is either a tile or a list of grid keys.
 sub add_undo_action { #{{{1
     my ($self, $action, $data) = @_;
-    $log->info("add_undo_action from " . (caller)[2] . ", data " . Dumper($data));
 
     # we want a reference to a list of tiles; we've been passed either a list of keys or a single tile reference.
     my $undo_data = [ ((ref $data) eq 'ARRAY') 
@@ -3017,14 +3060,13 @@ sub add_undo_action { #{{{1
     ];
 
     my $new_action = [ $action, $undo_data ];
-    $log->info("add_undo_action new_action " . Dumper($new_action));
 
     # Are there any items on the redo stack?
     if (my $new_branch_node = pop @{ $self->scene->redo_stack }) {
 
         if ((ref $new_branch_node) eq 'HASH' || wxTheApp->config->automatic_branching) {
 
-            $log->info("create branch then add new action");
+            $log->debug("create branch then add new action");
             
             # the thing called new_branch_node may already be a branch node, or it may be a simple action.
             # If the latter, make it into a branch node first, then we can add the new action generically.

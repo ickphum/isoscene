@@ -22,7 +22,7 @@ use English qw(-no_match_vars);
 use IsoCanvas;
 use IsoGlCanvas;
 use IsoPasteSelector;
-#use IsoExportOptions;
+use IsoExportFrame;
 
 # attributes {{{1
 
@@ -586,10 +586,17 @@ sub do_menu_choice { #{{{1
     }
     elsif ($string eq $MI_EXPORT) {
 
-        # display the export panel. Normal drawing operations can continue while this panel is displayed.
-        wxTheApp->load_panel_settings($self->export_options_pnl);
-        $self->export_options_pnl->Show;
-        $self->Layout;
+        my $frame = IsoExportFrame->new($self, $app->scene);
+
+        # the correct dimensions come from the canvas size vs the scrollwindow size,
+        # we just need to turn the scrollbars on.
+        $frame->scroll->SetScrollbars(1, 1, 1, 1);
+        $frame->Show;
+
+#        # display the export panel. Normal drawing operations can continue while this panel is displayed.
+#        wxTheApp->load_panel_settings($self->export_options_pnl);
+#        $self->export_options_pnl->Show;
+#        $self->Layout;
     }
     elsif ($string eq $MI_IMPORT) {
         my $dialog = Wx::FileDialog->new( $self,
