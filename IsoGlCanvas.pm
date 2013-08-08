@@ -231,7 +231,7 @@ sub new { #{{{1
 
     # if this canvas is in the export frame (so we can resize it to the correct resolution for export),
     # get all the frame information from the real frame.
-    $self->frame("$parent" =~ /ScrolledWindow/ ? $parent->GetParent->GetParent : $parent);
+    $self->frame("$parent" =~ /ScrolledWindow/ ? $parent->GetParent : $parent);
 
     $self->render_group({});
     for my $group (qw(permanent new transient select)) {
@@ -434,6 +434,8 @@ sub Resize { # {{{1
 
     $log->info("Resize $width $height");
 
+    $event->Skip;
+
     return unless $self->GetContext;
 
     glClearColor(0.5,0.5,0.8,0);
@@ -442,6 +444,7 @@ sub Resize { # {{{1
     glViewport( 0, 0, $width, $height );
 
     $self->calculate_grid_points;
+
 }
 ################################################################################
 

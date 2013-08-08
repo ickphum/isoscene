@@ -27,7 +27,7 @@ use IsoExportFrame;
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    tool_panel canvas gl_canvas branch_choice_pnl message_pnl export_options_pnl
+    tool_panel canvas_scroller canvas_sizer_item canvas branch_choice_pnl message_pnl export_options_pnl
 
     mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -380,17 +380,51 @@ sub new { #{{{1
     $self->select_mode($AM_CURRENT);
     $self->current_side($SI_RIGHT);
 
-#    $self->canvas(IsoCanvas->new($self, $scene));
-    $self->canvas(IsoGlCanvas->new($self, $scene));
-    $log->debug("canvas built ok");
+
+
+
+
+
+
+
+    my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
+
+    $self->canvas_scroller(my $canvas_scroller = Wx::ScrolledWindow->new($self, -1 ));
+    $canvas_scroller->SetSizer(my $scrolling_sizer = Wx::BoxSizer->new(wxVERTICAL));
+
+    $self->canvas(IsoGlCanvas->new($canvas_scroller, $scene, -1, undef, [ 300, 300 ]));
+    $self->canvas_sizer_item($scrolling_sizer->Add($self->canvas, 1, wxEXPAND));
+
+#    $self->canvas_sizer_item->SetProportion(0);
+#    $self->canvas_sizer_item->SetFlag(0);
+    $self->canvas->SetSize([1000,1000]);
+#    $canvas_scroller->SetVirtualSize(1000,1000);
+#    $self->canvas_scroller->GetSizer->Layout;
+
+#    $self->canvas_sizer_item->SetProportion(1);
+#    $self->canvas_sizer_item->SetFlag(wxEXPAND);
+#    # $self->canvas->SetSize([1000,1000]);
+#    $self->canvas_scroller->GetSizer->Layout;
+
+    $canvas_side_sizer->Add($canvas_scroller, 1, wxEXPAND);
+
+
+
+
+
+
+
+
+
+
+
+
+#    $self->canvas(IsoGlCanvas->new($self, $scene));
 
     # fix redo button in case we saved on a branch point
     $self->canvas->set_undo_redo_button_states;
 
-    my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
-
-    $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
-#    $canvas_side_sizer->Add($self->gl_canvas, 3, wxEXPAND );
+#    $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
 
     # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
@@ -408,6 +442,20 @@ sub new { #{{{1
 
     Wx::Event::EVT_BUTTON($self, $self->export_options_pnl->FindWindow('export_btn'), \&finish_export_panel);
     Wx::Event::EVT_BUTTON($self, $self->export_options_pnl->FindWindow('cancel_btn'), \&finish_export_panel);
+    Wx::Event::EVT_SLIDER($self, $self->export_options_pnl->FindWindow('pixels_per_tile_sld'), sub {
+        my ($frame, $event) = @_;
+        $log->info("slider @_");
+
+#        $self->canvas_sizer_item->SetProportion(0);
+#        $self->canvas_sizer_item->SetFlag(0);
+#        $self->canvas_scroller->SetVirtualSize(650,800);
+        $self->canvas_scroller->SetScrollbars(1, 1, 1, 1);
+        $self->canvas->SetSize([650,800]);
+        $self->Refresh;
+
+        $event->Skip;
+        return;
+    });
 
     # message panel
     $self->message_pnl( $app->xrc->LoadPanel($self, 'message_pane') );
@@ -543,7 +591,6 @@ sub do_menu_choice { #{{{1
         $app->scene->save;
         $app->scene( IsoScene->new() );
         $self->canvas->scene($app->scene);
-#        $self->gl_canvas->scene($app->scene);
         $self->canvas->set_undo_redo_button_states;
         $app->set_frame_title;
         $self->Refresh;
@@ -586,17 +633,19 @@ sub do_menu_choice { #{{{1
     }
     elsif ($string eq $MI_EXPORT) {
 
-        my $frame = IsoExportFrame->new($self, $app->scene);
+        # change
+        $self->canvas_sizer_item->SetProportion(0);
+        $self->canvas_sizer_item->SetFlag(0);
+        $self->canvas_scroller->SetVirtualSize(650,800);
+        $self->canvas_scroller->SetScrollbars(1, 1, 1, 1);
+        $self->canvas->SetSize([650,800]);
 
-        # the correct dimensions come from the canvas size vs the scrollwindow size,
-        # we just need to turn the scrollbars on.
-        $frame->scroll->SetScrollbars(1, 1, 1, 1);
-        $frame->Show;
-
-#        # display the export panel. Normal drawing operations can continue while this panel is displayed.
-#        wxTheApp->load_panel_settings($self->export_options_pnl);
-#        $self->export_options_pnl->Show;
-#        $self->Layout;
+        # display the export panel. Normal drawing operations can continue while this panel is displayed.
+        wxTheApp->load_panel_settings($self->export_options_pnl);
+        $self->export_options_pnl->Show;
+        $self->Layout;
+        $self->canvas->SetSize([650,800]);
+        $self->canvas->Layout;
     }
     elsif ($string eq $MI_IMPORT) {
         my $dialog = Wx::FileDialog->new( $self,
@@ -616,7 +665,6 @@ sub do_menu_choice { #{{{1
 
         $self->action($AC_IMPORT);
         $self->canvas->set_cursor;
-#        $self->gl_canvas->set_cursor;
         $self->Refresh;
     }
     elsif ($string =~ /$MI_SCENE_OPTIONS:(.*)/) {
@@ -704,7 +752,6 @@ sub change_mode { #{{{1
     $self->mode($new_mode);
 
     $self->canvas->set_cursor;
-#    $self->gl_canvas->set_cursor;
 
     return;
 }
@@ -811,7 +858,6 @@ sub change_side_colour { #{{{1
     $self->current_side($side);
     $self->action($AC_PAINT);
     $self->canvas->set_cursor;
-#    $self->gl_canvas->set_cursor;
 
     $brush->SetColour($colour);
     $self->update_scene_color($side);
@@ -1065,6 +1111,10 @@ sub finish_export_panel { #{{{1
         wxTheApp->save_panel_settings($self->export_options_pnl);
         $self->canvas->export_scene;
     }
+
+    $self->canvas_sizer_item->SetProportion(1);
+    $self->canvas_sizer_item->SetFlag(wxEXPAND);
+    $self->canvas_scroller->SetScrollbars(0,0,0,0);
 
     $self->export_options_pnl->Hide;
     $self->Layout;
