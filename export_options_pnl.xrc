@@ -211,18 +211,28 @@
                                             <orient>wxVERTICAL</orient>
                                             <label>Format</label>
                                             <object class="sizeritem">
-                                                <flag>wxALIGN_CENTER_HORIZONTAL|wxRIGHT|wxTOP|wxBOTTOM</flag>
+                                                <flag>wxALIGN_LEFT|wxALL</flag>
+                                                <border>5</border>
+                                                <object class="wxRadioButton" name="tga_rbn">
+                                                    <style>wxRB_GROUP</style>
+                                                    <label>TGA</label>
+                                                    <value>1</value>
+                                                </object>
+                                            </object>
+                                            <object class="sizeritem">
+                                                <flag>wxALIGN_LEFT|wxALL</flag>
                                                 <border>5</border>
                                                 <object class="wxRadioButton" name="png_rbn">
-                                                    <style>wxRB_GROUP</style>
+                                                    <enabled>0</enabled>
                                                     <label>PNG</label>
                                                     <value>0</value>
                                                 </object>
                                             </object>
                                             <object class="sizeritem">
-                                                <flag>wxALIGN_CENTER_HORIZONTAL|wxALL</flag>
+                                                <flag>wxALIGN_LEFT|wxALL</flag>
                                                 <border>5</border>
                                                 <object class="wxRadioButton" name="jpeg_rbn">
+                                                    <enabled>0</enabled>
                                                     <label>JPEG</label>
                                                     <value>0</value>
                                                 </object>
