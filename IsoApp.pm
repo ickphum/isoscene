@@ -36,7 +36,7 @@ sub new { # {{{1
     $self->xrc->Load('message_pane.xrc');
 
     my @images = qw(cube menu paint sample import erase shade_cube
-        undo redo undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
+        undo undo_many redo redo_many undo_redo_menu branch_redo redo_to_branch undo_to_branch choose_branch new_branch
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
         small_paste small_cube);
@@ -86,10 +86,30 @@ sub new { # {{{1
     $self->frame->Show(1);
 
     $self->autosave_timer(Wx::Timer->new($self));
-    Wx::Event::EVT_TIMER($self, $self->autosave_timer, sub { $self->scene->save; $self->config->save; });
+    Wx::Event::EVT_TIMER($self, $self->autosave_timer, sub {
+        my ($parent, $event) = @_;
+
+        # we're either waiting a minute or 2 seconds
+        my $interval = $self->autosave_timer->GetInterval;
+        if ($interval == $self->config->autosave_period_seconds * 1000) {
+
+            # the long timer has gone off, so we're ready to autosave. 
+            # We restart the timer with the short period.
+            $log->info("long timer, wait for idle period");
+            $self->autosave_timer->Start($self->config->autosave_idle_seconds * 1000, wxTIMER_ONE_SHOT);
+        }
+        else {
+
+            # The short timer has gone off, meaning no mouse activity occurred in the 
+            # period, we'll save and restart with the long interval again.
+            $log->info("short timer, save and reset to long");
+            $self->scene->save; 
+            $self->config->save; 
+            $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
+        }
+    });
 
     if (my $file = $option->{script}) {
-
 
         if (-r $file && -f $file) {
             $self->script_lines([ grep { /^[^#]/ } read_file($file) ]);
@@ -110,7 +130,7 @@ sub new { # {{{1
     else {
 
         # don't start the autosave timer while we're playing a script. It will start afterward.
-        $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
+        $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
     }
 
     return $self;
@@ -229,10 +249,10 @@ sub stop_script { #{{{1
 # Tricky to find a single point to do this (needed at load, open & save as),
 # so just make it easy to call.
 sub set_frame_title { #{{{1
-    my ($self) = @_;
+    my ($self, $message) = @_;
 
     my $scene_file = $self->scene->filename;
-    $self->frame->SetTitle("$scene_file - IsoScene");
+    $self->frame->SetTitle("$scene_file - IsoScene" . ($message ? " - $message" : ''));
 
     return;
 }
@@ -260,7 +280,6 @@ sub set_button_bitmap { #{{{1
 sub save_panel_settings { #{{{1
     my ($self, $panel) = @_;
 
-
     # setting group is named for the panel, less "_pnl"
     (my $setting_group = $panel->GetName) =~ s/_pnl//;
     my $scene = $self->scene;
@@ -273,7 +292,7 @@ sub save_panel_settings { #{{{1
         my ($parent) = @_;
 
         for my $child ( $parent->GetChildren ) {
-            $log->info("child $child " . $child->GetName . " has children? " . ($child->GetChildren ? 'yes' : 'undef'));
+            $log->debug("child $child " . $child->GetName . " has children? " . ($child->GetChildren ? 'yes' : 'undef'));
             if ($child->GetChildren) {
                 $get_child_values->($child);
             }

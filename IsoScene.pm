@@ -1,6 +1,9 @@
 #$Id: IsoScene.pm 169 2013-03-02 05:27:05Z ikm $
 package IsoScene;
 
+use strict;
+use warnings;
+
 use base qw(Class::Accessor::Fast);
 use Data::Dumper;
 use YAML::XS qw(Dump Load);
@@ -10,6 +13,7 @@ use Wx qw(wxTheApp);
 use File::Basename;
 use IO::Compress::Zip qw(zip $ZipError) ;
 use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
+use File::Slurp qw(read_file write_file);
 
 my $log = get_logger;
 
@@ -33,18 +37,23 @@ __PACKAGE__->mk_accessors( qw(
     clipboard
     export_options
     tile_border
+    opengl
 ));
 
 ################################################################################
 sub new { # {{{1
     my ( $class, $arg ) = @_;
 
+    my $use_compressed_files = wxTheApp->config->use_compressed_files;
+
     if ($arg->{file} && $arg->{file} !~ /\./) {
-        $arg->{file} .= ".isz";
+        $arg->{file} .= $use_compressed_files ? '.isz' : '.isc';
     }
 
     my $app = wxTheApp;
     my $config = $app->config;
+
+    my $busy = Wx::BusyCursor->new;
 
     my $default_scene = {
         grid => {},
@@ -63,19 +72,43 @@ sub new { # {{{1
         tile_line_rgb => $config->default_scene_tile_line_rgb,
         filename => $config->default_scene_file,
         tile_border => 'normal',
+        opengl => 1,
     };
 
     my $scene;
     if ($arg->{file}) {
 
+        # we assigned default extensions above, now respect whatever extension we find; you should
+        # be able to either type of file in either mode (compressed or not).
+
         my $unzipped_yaml;
-        unless (unzip $arg->{file} => \$unzipped_yaml) {
-            $log->logdie("Error during uncompression of $file: $UnzipError");
-            next;
+        if ($arg->{file} =~ /\.isz\z/) {
+            $log->info("load compressed file $arg->{file}");
+            unless (unzip $arg->{file} => \$unzipped_yaml) {
+                $log->logdie("Error during uncompression of $arg->{file} : $UnzipError");
+            }
+        }
+        else {
+            $log->info("load YML file $arg->{file}");
+            $unzipped_yaml = read_file($arg->{file});
         }
 
         $scene = Load($unzipped_yaml);
-        $log->info("loaded scene with this many tiles: " . scalar keys %{ $scene->{grid} });
+
+        # we haven't added new keys to old scenes yet (see below) so we can tell opengl
+        # files apart.
+        unless ($scene->opengl) {
+            my $new_grid = {};
+            for my $tile (values %{ $scene->grid }) {
+                my $left = $tile->{left};
+                $tile->{left} = - $tile->{right};
+                $tile->{right} = - $left;
+                $new_grid->{ "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}" } = $tile;
+            }
+            $scene->grid($new_grid);
+        }
+
+        $log->info("loaded scene with this many tiles: " . scalar keys %{ $scene->grid });
     }
     else {
         $scene = $default_scene;
@@ -119,15 +152,25 @@ sub remember_filename { #{{{1
 
 ################################################################################
 sub save { #{{{1
-    my ($self, $settings) = @_;
+    my ($self) = @_;
+
+    my $busy = Wx::BusyCursor->new;
+
+    my $use_compressed_files = wxTheApp->config->use_compressed_files;
 
     my $yaml_scene = Dump($self);
-    zip \$yaml_scene => $self->filename . '.isz', Name => ($self->filename . '.isc')
-        or $log->logdie("zip failed: $ZipError");
+    
+    if ($use_compressed_files) {
+        zip \$yaml_scene => $self->filename . '.isz', Name => ($self->filename . '.isc')
+            or $log->logdie("zip failed: $ZipError");
+        $log->debug("saved to " . $self->filename . '.isz');
+    }
+    else {
+        write_file($self->filename . '.isc', $yaml_scene);
+        $log->debug("saved to " . $self->filename . '.isc');
+    }
 
     $self->remember_filename;
-
-    $log->debug("saved to " . $self->filename . '.isz');
 
     return;
 }

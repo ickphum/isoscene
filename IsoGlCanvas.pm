@@ -44,7 +44,7 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
 
     paste_list
 
-    grid transient_grid key_hash
+    grid transient_grid key_hash visible_is_new
 
     render_group texture_id init
     ));
@@ -142,9 +142,10 @@ my %Shape_clashes = (
         # paint half a triangle.
         [ 0,0,0, $SH_TRIANGLE_RIGHT, 3, 
             [
-                [ -1, 0,-1, $SH_LEFT, ],
+                [  1, 0, 1, $SH_LEFT, ],
                 [  0, 0, 0, $SH_TOP, ],
                 [  0, 0, 0, $SH_RIGHT, ],
+                [  0, 0, 0, $SH_TRIANGLE_LEFT, ],
             ],
         ],
     ],
@@ -153,7 +154,7 @@ my %Shape_clashes = (
             [
                 [  0, 0, 0, $SH_LEFT, ],
                 [  0, 0, 0, $SH_RIGHT, ],
-                [  0,-1, 1, $SH_TOP, ],
+                [  0,-1,-1, $SH_TOP, ],
                 [  0, 0, 0, $SH_TRIANGLE_RIGHT, ],
             ],
         ],
@@ -432,7 +433,7 @@ sub Resize { # {{{1
     $self->device_width($width);
     $self->device_height($height);
 
-    $log->info("Resize $width $height");
+    $log->debug("Resize $width $height");
 
     $event->Skip;
 
@@ -571,6 +572,9 @@ sub calculate_grid_points { #{{{1
 
     $self->make_render_group_array_objects('grid');
 
+    # whenever we change the grid area, we clear this flag
+    $self->visible_is_new(0);
+
     return;
 }
 
@@ -654,7 +658,7 @@ sub make_render_group_array_objects { #{{{1
     # size from vertex list, textures and colors must match if present
     for my $real_group_id ($group_id, "${group_id}_text") {
         my $number_vertices = scalar @{ $self->render_group->{$real_group_id}->{vertex}->{data} } / $array_info{vertex}->{group_size};
-        $log->debug("made $number_vertices vertices for $real_group_id");
+        # $log->debug("made $number_vertices vertices for $real_group_id");
 
         for my $array_type (qw(vertex color texture)) {
             my $data = $self->render_group->{$real_group_id}->{$array_type}->{data};
@@ -698,7 +702,7 @@ sub display_render_group { # {{{1
     }
 
     return unless $render_group->{number_vertices};
-    $log->debug("rendering $render_group->{number_vertices} vertices from $real_group_id");
+    # $log->debug("rendering $render_group->{number_vertices} vertices from $real_group_id");
 
     glVertexPointer_p(2, $render_group->{vertex}->{array});
 
@@ -730,7 +734,7 @@ sub display_render_group { # {{{1
 ################################################################################
 
 sub Render { # {{{1
-    my ($self) = @_;
+    my ($self, $width, $height) = @_;
 
     return unless $self->GetContext;
     $self->SetCurrent( $self->GetContext );
@@ -771,16 +775,34 @@ sub Render { # {{{1
 #
 #    $self->make_render_group_array_objects('text');
 
-    my ($width, $height) = $self->GetSizeWH;
+    my ($canvas_width, $canvas_height) = $self->GetSizeWH;
+    my $render_to_image;
+
+    if (defined $width) {
+
+        glViewport( 0, 0, $width, $height );
+        $render_to_image = 1;
+
+        $log->info(sprintf("render to image; origin %.1f,%.1f, output dim $width x $height, scale %.2f, logical dim %.1f x %.1f", 
+            $self->scene->origin_x,$self->scene->origin_y,
+            $self->scene->scale, 
+            $width * $self->scene->scale, 
+            $height * $self->scene->scale) );
+
+    }
+    else {
+        ($width, $height) = ($canvas_width, $canvas_height);
+    }
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 #    glOrtho(0, $width * $self->scene->scale, $height * $self->scene->scale, 0, -1, 1);
+
     glOrtho(0, $width * $self->scene->scale, 0, $height * $self->scene->scale, -1, 1);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glTranslatef( $self->scene->origin_x,$self->scene->origin_y,0 );
- #   glScalef( $self->scene->scale,$self->scene->scale, 1);
 
     # Rendering passes & arrays:
     # Grid - vertex (may come before tiles)
@@ -793,8 +815,10 @@ sub Render { # {{{1
     glEnableClientState(GL_VERTEX_ARRAY);
 
     # display the grid
-    glColor3ub(0xaa, 0xaa, 0xaa);
-    $self->display_render_group('grid');
+    unless ($render_to_image) {
+        glColor3ub(0xaa, 0xaa, 0xaa);
+        $self->display_render_group('grid');
+    }
 
     for my $group (qw(permanent new transient)) {
         $self->display_render_group($group);
@@ -835,7 +859,12 @@ sub Render { # {{{1
     glVertex2f(1,1);
     glEnd;
 
-    $self->SwapBuffers();
+    if ($render_to_image) {
+        glViewport( 0, 0, $canvas_width, $canvas_height );
+    }
+    else {
+        $self->SwapBuffers();
+    }
 
     return;
 }
@@ -904,7 +933,7 @@ sub rebuild_render_group { #{{{1
         }
     }
 
-    $log->debug("sources for $group_id : " . Dumper($sources));
+    # $log->debug("sources for $group_id : " . Dumper($sources));
 
     # position of text relative to tile anchor
     my %shape_text_offset = (
@@ -943,7 +972,7 @@ sub rebuild_render_group { #{{{1
             # skip any keys in the exclude hash
             next if $exclude_hash->{$grid_key};
 
-            $log->debug("add $grid_key in group $group_id");
+            # $log->debug("add $grid_key in group $group_id");
             my $tile = $data_hash->{$grid_key}
                 or $log->logdie("didn't find tile in data array");
 
@@ -1025,13 +1054,13 @@ sub rebuild_render_group { #{{{1
 sub preserve_transient_grid { #{{{1
     my ($self) = @_;
 
-    $log->info("preserve_transient_grid from " . (caller)[2] . ", data " . Dumper($self->transient_grid));
+    $log->debug("preserve_transient_grid from " . (caller)[2] . ", data " . Dumper($self->transient_grid));
 
     # copy tiles from transient_grid to scene and add keys to new
     my ($grid, $transient_grid) = ($self->grid, $self->transient_grid);
     my @transient_keys = keys %{ $transient_grid };
     for my $key (@transient_keys) {
-        $log->info("copy transient $key to new");
+        $log->debug("copy transient $key to new");
         $grid->{ $key } = $transient_grid->{ $key };
         $self->key_hash->{new}->{$key} = 1;
     }
@@ -1051,9 +1080,26 @@ sub preserve_transient_grid { #{{{1
 }
 
 ################################################################################
+# make all new tiles permanent, so we speed up any new painting from now on.
+sub make_new_permanent { #{{{1
+    my ($self) = @_;
+
+    # all we have to do is empty the new key hash and rebuild
+    $self->key_hash->{new} = {};
+    $self->rebuild_render_group('new');
+    $self->rebuild_render_group('permanent');
+
+    return;
+}
+
+################################################################################
 # mark all visible tiles as new, so we can render them separately.
 sub make_visible_new { #{{{1
     my ($self) = @_;
+
+    # we only need to do this once per visible region; this flag goes false 
+    # whenever we zoom or scroll.
+    $self->visible_is_new(1);
 
     $self->mark_visible_tiles;
 
@@ -1222,6 +1268,9 @@ sub scene { #{{{1
         for my $array (qw(permanent new transient select)) {
             $self->rebuild_render_group($array);
         }
+
+        # initialise the undo/redo buttons to match the new scene
+        $self->set_undo_redo_button_states;
     }
 
     return $self->_scene;
@@ -1235,7 +1284,7 @@ sub set_cursor { #{{{1
     my $cursor = $frame->mode eq $IsoFrame::MO_MOVE
         ? $self->action_cursor->{move}
         : $self->action_cursor->{$frame->action};
-    $log->logdie("no cursor for action " . $frame->action)
+    $log->logconfess("no cursor for action " . $frame->action)
         unless $cursor;
     $self->SetCursor($cursor);
 
@@ -1323,6 +1372,11 @@ sub mouse_event_handler { #{{{1
     my $action = $frame->action;
     my $app = wxTheApp;
 
+    # if the autosave timer is running on the short period, restart it; we're not idle yet
+    if ($app->autosave_timer->GetInterval == $app->config->autosave_idle_seconds * 1000) {
+        $app->autosave_timer->Start($app->config->autosave_idle_seconds * 1000, wxTIMER_ONE_SHOT);
+    }
+
     my ($logical_x, $logical_y) = ( int($device_x * $self->scene->scale - $self->scene->origin_x),
         int($device_y * $self->scene->scale - $self->scene->origin_y));
     # $log->debug("logical_x, logical_y = $logical_x, $logical_y, origin = " . $self->scene->origin_x . ',' . $self->scene->origin_y);
@@ -1374,9 +1428,11 @@ sub mouse_event_handler { #{{{1
 
                 # we're starting an area erase; add all visible tiles to new so we only have to refresh that array on every move,
                 # not permanent as well.
-                $self->make_visible_new;
-                $self->rebuild_render_group('permanent');
-                $self->rebuild_render_group('new');
+                unless ($self->visible_is_new) {
+                    $self->make_visible_new;
+                    $self->rebuild_render_group('permanent');
+                    $self->rebuild_render_group('new');
+                }
             }
             elsif ($action =~ /select/) {
                 $log->debug("lmb down select");
@@ -1411,7 +1467,9 @@ sub mouse_event_handler { #{{{1
             $self->paint_shape(0);
 
             if ($action eq $IsoFrame::AC_SAMPLE) {
-                $frame->action($IsoFrame::AC_PAINT);
+
+                $frame->action($frame->previous_action);
+
                 $self->set_cursor;
                 $frame->update_scene_color($side);
                 $frame->Refresh;
@@ -1419,7 +1477,7 @@ sub mouse_event_handler { #{{{1
 
             if ($action eq $IsoFrame::AC_IMPORT) {
                 $self->import_bitmap($side);
-                $frame->action($IsoFrame::AC_PAINT);
+                $frame->action($frame->previous_action);
                 $self->set_cursor;
                 $frame->Refresh;
             }
@@ -1432,7 +1490,7 @@ sub mouse_event_handler { #{{{1
                     $self->paint_shape(1);
                 }
                 else {
-                    $frame->action($IsoFrame::AC_PAINT);
+                    $frame->action($frame->previous_action);
                     $self->set_cursor;
                     $self->paste_list(undef);
                 }
@@ -1444,6 +1502,10 @@ sub mouse_event_handler { #{{{1
             }
 
             if ($mode eq $IsoFrame::MO_AREA) {
+
+                # clear area size message
+                wxTheApp->set_frame_title();
+
                 if ($action =~ /$IsoFrame::AC_PAINT|$IsoFrame::AC_SHADE_CUBE/o) {
                     $self->preserve_transient_grid;
                     $refresh = 1;
@@ -1684,10 +1746,10 @@ sub mouse_event_handler { #{{{1
             $scale = 1 if ($scale > 0.9 && $scale < 1.1);
 
             $self->scene->scale($scale);
+            $log->debug("scale now $scale");
             $self->scene->origin_x($scale_factor * ($self->scene->origin_x + $logical_x) - $logical_x);
             $self->scene->origin_y($scale_factor * ($self->scene->origin_y + $logical_y) - $logical_y);
             $self->calculate_grid_points;
-#            $self->tile_cache(0);
             $refresh = 1;
         }
     }
@@ -1817,7 +1879,7 @@ sub mark_area { #{{{1
     my @axes = @{ $shape_axes{$shape} };
     my @mins = (List::Util::min($start[$axes[0]], $current[$axes[0]]), List::Util::min($start[$axes[1]], $current[$axes[1]]));
     my @maxes = (List::Util::max($start[$axes[0]], $current[$axes[0]]), List::Util::max($start[$axes[1]], $current[$axes[1]]));
-    $log->info("mins [ @mins ], maxes [ @maxes ]");
+    $log->debug("mins [ @mins ], maxes [ @maxes ]");
 
     my $axis_1_coeff = pop @axes;
     my $axis_0_coeff = pop @axes;
@@ -1845,6 +1907,8 @@ sub mark_area { #{{{1
     my $triangle_shift = $shape_triangle_shift->{ $shape }->{ $facing };
 
     my $action = $self->frame->action;
+
+    wxTheApp->set_frame_title(($maxes[0] - $mins[0] + 1) . "x" . ($maxes[1] - $mins[1] + 1));
 
     my @point;
     for my $coord_0 ($mins[0] .. $maxes[0]) {
@@ -1913,7 +1977,6 @@ sub mark_area { #{{{1
                 $point[ $axes[0] ] = $maxes[0];
                 $point[ $axes[1] ] = $coord_1;
                 $point[ $axes[2] ] = $axis_0_coeff * $maxes[0] + $axis_1_coeff * $coord_1; 
-                $log->info("coord_1 $coord_1 point @point");
                 $self->shade_cube(@point, $facing, $shape);
             }
 
@@ -1921,7 +1984,6 @@ sub mark_area { #{{{1
                 $point[ $axes[0] ] = $coord_0;
                 $point[ $axes[1] ] = $mins[1];
                 $point[ $axes[2] ] = $axis_0_coeff * $coord_0 + $axis_1_coeff * $mins[1]; 
-                $log->info("coord_0 $coord_0 point @point");
                 $self->shade_cube(@point, $facing, $shape);
             }
 
@@ -2013,7 +2075,9 @@ sub paint_tile { #{{{1
 
             my $tile;
             if ($tile = $self->grid->{$grid_key}) {
+                $log->debug("found a clashing tile by key at $grid_key");
                 if ($tile->{shape} eq $clash_shape) {
+                    $log->debug("clash tile matches shape $clash_shape, add shift_flag $shift_flag");
                     $shifts += $shift_flag;
                     last;
                 }
@@ -2074,7 +2138,7 @@ sub paint_tile { #{{{1
 ################################################################################
 sub shade_cube { #{{{1
     my ($self, $left, $top, $right, $facing, $paint_shape) = @_;
-    $log->info("shade_cube $left, $top, $right, $facing, $paint_shape");
+    $log->debug("shade_cube $left, $top, $right, $facing, $paint_shape");
 
     my $frame = $self->frame;
     my $refresh;
@@ -2362,7 +2426,7 @@ sub clipboard_operation { #{{{1
         my %brush_cache;
         for my $tile (@clipboard_tiles) {
 
-            $log->info("palette at $tile->{brush_index} is " . Dumper($palette->[ $tile->{brush_index} ]));
+            $log->debug("palette at $tile->{brush_index} is " . Dumper($palette->[ $tile->{brush_index} ]));
 
             # we're still using DC graphics to build the thumbnail; just make brushes as we go
             $brush_cache{ $tile->{brush_index} } ||= Wx::Brush->new( Wx::Colour->new( @{ $palette->[ $tile->{brush_index} ] } ), wxBRUSHSTYLE_SOLID );
@@ -2851,81 +2915,12 @@ sub export_scene { #{{{1
     my ($self) = @_;
 
     $log->info("export_scene");
-#  my $w = 128;
-#  my $h = 128;
-#
-#  # Allocate texture buffer
-#  my($TextureID_FBO) = glGenTextures_p(1);
-#
-#  # Allocate FBO frame and render buffers
-#  my($FrameBufferID) = glGenFramebuffersEXT_p(1);
-#  my($RenderBufferID) = glGenRenderbuffersEXT_p(1);
-#
-#  # Bind frame/texture
-#  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, $FrameBufferID);
-#  glBindTexture(GL_TEXTURE_2D, $TextureID_FBO);
-#
-#  # Initiate texture
-#  glTexImage2D_c(GL_TEXTURE_2D, 0, GL_RGBA8, $w, $h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-#  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-#
-#  # Bind frame/render buffers
-#  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, $TextureID_FBO, 0);
-#  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, $RenderBufferID);
-#  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, $w, $h);
-#  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, $RenderBufferID);
-#
-#  # Test status
-#  my $stat = glCheckFramebufferStatusEXT(GL_RENDERBUFFER_EXT);
-#  $log->info(sprintf("Status: %04X\n",$stat));
-#
-#  # Draw to texture
-#  $self->Render;
-#
-#  # Release binding
-#  glBindRenderbufferEXT( GL_RENDERBUFFER_EXT, 0 );
-#  glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
-#
-#  # Delete frame/render buffers
-#  # NOTE: Should cache to improve performance
-#  glDeleteRenderbuffersEXT_p( $RenderBufferID );
-#  glDeleteFramebuffersEXT_p( $FrameBufferID );
-#
-#  return;
-
-    my ($width, $height) = $self->GetSizeWH;
-    my $image = new OpenGL::Image(width => $width, height => $height);
-    my ($fmt, $size) = $image->Get('gl_format', 'gl_type');
-
-    # turn off grid & background temporarily
-#    $self->screenshot_mode(1);
-
-    $self->Render;
-
-    glReadBuffer(GL_BACK);
-
-    OpenGL::glReadPixels_c(0, 0, $width, $height, $fmt, $size, $image->Ptr());
-
-    my $app = wxTheApp;
-    my $filename = 'export.png';
-
-    $image->Save($filename);
-    $log->info("saved screenshot to $filename");
-
-    # restore grids
-#    $self->screenshot_mode(0);
-
-    # as with read_pixels, we don't swap buffers here
-
-    return;
 
     my $busy = Wx::BusyCursor->new;
     $self->SetCursor(wxHOURGLASS_CURSOR);
     $self->Refresh;
     $self->Update;
 
-    my $dc = Wx::PaintDC->new( $self );
     my $frame = $self->frame;
 
     # we need to know what the logical extents of the scene are.
@@ -2947,7 +2942,7 @@ sub export_scene { #{{{1
         $min_y_grid = min($min_y_grid, $tile_y_grid);
         $max_y_grid = max($max_y_grid, $tile_y_grid);
     }
-    $log->debug("grid key extents: $min_x_grid,$min_y_grid to $max_x_grid,$max_y_grid");
+    $log->info("grid key extents: $min_x_grid,$min_y_grid to $max_x_grid,$max_y_grid");
 
     # add margin so it's consistent wrt number of empty grid rows/cols
     # around image
@@ -2970,7 +2965,7 @@ sub export_scene { #{{{1
     my $export_option = $self->scene->export_options;
 
     # find bitmap size
-#    my ($width, $height); 
+    my ($width, $height); 
     if ($export_option->{pixels_per_tile_rbn}) {
         my $pixels_per_tile = $export_option->{pixels_per_tile_sld};
         ($width, $height) = (($max_x_grid - $min_x_grid) * $pixels_per_tile, ($max_y_grid - $min_y_grid) * $pixels_per_tile);
@@ -3003,47 +2998,71 @@ sub export_scene { #{{{1
 
     # find the scale factors for logical to device width, then use the smaller so we fit
     # both dimensions in.
-    my $x_scale = $width / ($max_x - $min_x);
-    my $y_scale = $height / ($max_y - $min_y);
-    my $export_scale = min($x_scale, $y_scale);
-    $log->debug("export_scale from $x_scale, $y_scale : $export_scale");
+    my $x_scale = ($max_x - $min_x) / $width;
+    my $y_scale = ($max_y - $min_y) / $height;
+    my $export_scale = max($x_scale, $y_scale);
+    $log->info("export_scale from $x_scale, $y_scale : $export_scale");
 
-    # create a bitmap to hold the exported image
-    my $export_bm = Wx::Bitmap->new($width, $height, 24);
-    $log->debug("bitmap ok? : " . $export_bm->IsOk);
+    # Allocate texture buffer
+    my($TextureID_FBO) = glGenTextures_p(1);
 
-    # create a dc to draw the image into and link the bitmap to it
-    my $export_dc = Wx::MemoryDC->new();
-    $export_dc->SelectObject($export_bm);
-    $log->debug("memory dc ok? : " . $export_dc->IsOk);
+    # Allocate FBO frame and render buffers
+    my($FrameBufferID) = glGenFramebuffersEXT_p(1);
+    my($RenderBufferID) = glGenRenderbuffersEXT_p(1);
 
-    $export_dc->SetUserScale($export_scale, $export_scale);
+    # Bind frame/texture
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, $FrameBufferID);
+    glBindTexture(GL_TEXTURE_2D, $TextureID_FBO);
 
-    # set device origin to top left
-    my $device_origin_x = -$min_x * $export_scale;
-    my $device_origin_y = -$min_y * $export_scale;
-    $export_dc->SetDeviceOrigin($device_origin_x, $device_origin_y);
+    # Initiate texture
+    glTexImage2D_c(GL_TEXTURE_2D, 0, GL_RGBA8, $width, $height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    # draw the scene into the memory dc
-    $export_dc->SetBackground(wxTRANSPARENT_BRUSH);
-    $export_dc->Clear;
+    # Bind frame/render buffers
+    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, $TextureID_FBO, 0);
+    glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, $RenderBufferID);
+    glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, $width, $height);
+    glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, $RenderBufferID);
 
-    # clear the tile cache so the whole scene is drawn
-#    $self->tile_cache(0);
+    # Test status
+    my $stat = glCheckFramebufferStatusEXT(GL_RENDERBUFFER_EXT);
+    $log->info(sprintf("Status: %04X\n",$stat));
 
-    $self->draw_scene($export_dc, %{ $export_option });
+    # Draw to texture
+    my $scale = $self->scene->scale;
+    my @origin = ($self->scene->origin_x, $self->scene->origin_y);
+    $self->scene->scale($export_scale);
+    $self->scene->origin_x(- $min_x);
+    $self->scene->origin_y(- $min_y);
 
-    # convert to an image for alpha channel addition
-    my $export_image = $export_bm->ConvertToImage;
-    $export_image->SetMask(1);
-    $export_image->InitAlpha();
+    $self->Render($width, $height);
+#    $self->Render;
 
-    # save the image to file
-    my $name = $self->scene->filename;
-    my ($extension, $type) = $export_option->{jpeg_rbn}
-        ? ('jpg', wxBITMAP_TYPE_JPEG)
-        : ('png', wxBITMAP_TYPE_PNG);
-    $export_image->SaveFile("$name.$extension", $type);
+    $self->scene->scale($scale);
+    $self->scene->origin_x($origin[0]);
+    $self->scene->origin_y($origin[1]);
+
+    # we don't swap buffers here; we've rendered the export image into the back buffer, but
+    # we never want to see it.
+    glReadBuffer(GL_BACK);
+
+    my $image = new OpenGL::Image(width => $width, height => $height);
+    my ($fmt, $size) = $image->Get('gl_format', 'gl_type');
+
+    OpenGL::glReadPixels_c(0, 0, $width, $height, $fmt, $size, $image->Ptr());
+
+    my $name = $self->scene->filename . localtime->strftime("_%Y%m%d_%H%M%S") . '.tga';
+    $image->Save($name);
+
+    # Release binding
+    glBindRenderbufferEXT( GL_RENDERBUFFER_EXT, 0 );
+    glBindFramebufferEXT( GL_FRAMEBUFFER_EXT, 0 );
+
+    # Delete frame/render buffers
+    # NOTE: Should cache to improve performance
+    glDeleteRenderbuffersEXT_p( $RenderBufferID );
+    glDeleteFramebuffersEXT_p( $FrameBufferID );
 
     $log->debug("export done");
     $self->SetCursor(wxCROSS_CURSOR);
@@ -3120,60 +3139,75 @@ sub add_undo_action { #{{{1
 ################################################################################
 # returns true if the action was possible.
 sub undo_or_redo { #{{{1
-    my ($self, $redo, $no_refresh) = @_;
-    $log->info("undo_or_redo");
+    my ($self, $redo_flag, $no_refresh, $many) = @_;
+    $log->debug("undo_or_redo");
 
     # if we didn't get an explicit type, it's a timer and we check the flag set on LEFT_DOWN.
-    unless (defined $redo) {
-        $redo = $self->frame->undo_or_redo_flag;
+    unless (defined $redo_flag) {
+        $redo_flag = $self->frame->undo_or_redo_flag;
     }
+
+    # count is 1 or the many_count config item
+    my $count = $many ? wxTheApp->config->undo_many_count : 1;
 
     # undo and redo are conceptually the same; they take an action off a stack, either paint or erase a list of tiles 
     # depending on the action type and then put it on another stack. They only differ in the choice of stack
     # and action.
-    my ($source_stack, $target_stack, $erase_action, $paint_action) = $redo
+    my ($source_stack, $target_stack, $erase_action, $paint_action) = $redo_flag
         ? ($self->scene->redo_stack, $self->scene->undo_stack, $IsoFrame::AC_ERASE, $IsoFrame::AC_PAINT)  
         : ($self->scene->undo_stack, $self->scene->redo_stack, $IsoFrame::AC_PAINT, $IsoFrame::AC_ERASE);
 
-    return 0 unless my $next_action = pop @{ $source_stack };
-
-    push @{ $target_stack }, $next_action;
-
-    # Ok, make the change to the scene.
-    # Turn $next_action into a real action if it's a branch node
-    if ((ref $next_action) eq 'HASH') {
-        $log->debug("get real action from branch node");
-        $next_action = $next_action->{branches}->[ $next_action->{current_branch} ];
-    }
-
-    my ($action, $tiles) = @{ $next_action };
     my ($refresh_new, $refresh_permanent);
-    if ($action eq $erase_action) {
-        my $grid_keys = [ map { "$_->{facing}_$_->{left}_$_->{top}_$_->{right}" } @{ $tiles } ];
-        ($refresh_permanent, $refresh_new) = $self->remove_tiles($grid_keys);
-    }
-    elsif ($action eq $paint_action) {
-        for my $tile ( @{ $tiles } ) {
-            my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
-            $self->grid->{$grid_key} = $tile;
-            $log->info("undo/redo: paint $grid_key");
-            
-            # put all repainted tiles in new
-            $refresh_new = 1;
-            $self->key_hash->{new}->{$grid_key} = 1;
-            $self->key_hash->{select}->{$grid_key} = 1 if $tile->{selected};
+    while ($count && (my $next_action = pop @{ $source_stack } )) {
+        $count--;
+
+        push @{ $target_stack }, $next_action;
+
+        # Ok, make the change to the scene.
+        # Turn $next_action into a real action if it's a branch node
+        if ((ref $next_action) eq 'HASH') {
+            $log->debug("get real action from branch node");
+            $next_action = $next_action->{branches}->[ $next_action->{current_branch} ];
+        }
+
+        my ($action, $tiles) = @{ $next_action };
+        if ($action eq $erase_action) {
+            my $grid_keys = [ map { "$_->{facing}_$_->{left}_$_->{top}_$_->{right}" } @{ $tiles } ];
+            ($refresh_permanent, $refresh_new) = $self->remove_tiles($grid_keys);
+        }
+        elsif ($action eq $paint_action) {
+            for my $tile ( @{ $tiles } ) {
+                my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+                $self->grid->{$grid_key} = $tile;
+                $log->debug("undo/redo: paint $grid_key");
+
+                # put all repainted tiles in new
+                $refresh_new = 1;
+                $self->key_hash->{new}->{$grid_key} = 1;
+                $self->key_hash->{select}->{$grid_key} = 1 if $tile->{selected};
+            }
         }
     }
 
-    unless ($no_refresh) {
-        $self->set_undo_redo_button_states;
-        $self->rebuild_render_group('permanent') if $refresh_permanent;
-        $self->rebuild_render_group('new') if $refresh_new;
-        $self->rebuild_render_group('select');
-        $self->Refresh;
+    if (($refresh_permanent || $refresh_new) && ! $no_refresh) {
+        $self->rebuild_and_refresh($refresh_permanent, $refresh_new);
     }
 
-    return 1;
+    # return true if we did any work
+    return $refresh_permanent || $refresh_new;
+}
+
+################################################################################
+sub rebuild_and_refresh { #{{{1
+    my ($self, $refresh_permanent, $refresh_new) = @_;
+
+    $self->set_undo_redo_button_states;
+    $self->rebuild_render_group('permanent') if $refresh_permanent;
+    $self->rebuild_render_group('new') if $refresh_new;
+    $self->rebuild_render_group('select');
+    $self->Refresh;
+
+    return;
 }
 
 ################################################################################
@@ -3221,6 +3255,7 @@ sub change_to_branch { #{{{1
 ################################################################################
 # We should undo until no harkonnen breathes arrakeen air. And the stack position
 # matches the specified position.
+# This could probably be handled by the undo-many feature TODO.
 sub undo_to_position { #{{{1
     my ($self, $undo_stack_position) = @_;
 
@@ -3267,6 +3302,7 @@ sub redo_all_actions { #{{{1
 ################################################################################
 sub set_undo_redo_button_states { #{{{1
     my ($self) = @_;
+    $log->debug("set_undo_redo_button_states");
 
     # if the top action on the redo stack is a branch node, indicate this on the button
     my $top_redo_index = $#{ $self->scene->redo_stack };

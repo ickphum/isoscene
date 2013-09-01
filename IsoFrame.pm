@@ -22,12 +22,12 @@ use English qw(-no_match_vars);
 use IsoCanvas;
 use IsoGlCanvas;
 use IsoPasteSelector;
-use IsoExportFrame;
+#use IsoExportFrame;
 
 # attributes {{{1
 
 __PACKAGE__->mk_accessors( qw(
-    tool_panel canvas_scroller canvas_sizer_item canvas branch_choice_pnl message_pnl export_options_pnl
+    tool_panel canvas branch_choice_pnl message_pnl export_options_pnl
 
     mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
@@ -291,7 +291,7 @@ sub new { #{{{1
                 my ($self, $event) = @_;
 
                 $log->info("undo_redo_menu @_");
-                my $choices = [ qw(undo_to_branch redo_to_branch new_branch) ];
+                my $choices = [ qw(undo_to_branch undo_many redo_many redo_to_branch new_branch) ];
 
                 # if we're on a branch, display the choose_branch button
                 if ((ref $self->canvas->scene->redo_stack->[-1]) eq 'HASH') {
@@ -334,8 +334,11 @@ sub new { #{{{1
             my @config_options = qw(
                 autosave_on_exit
                 autosave_period_seconds 
+                autosave_idle_seconds 
+                use_compressed_files
                 undo_wait_milliseconds
                 undo_repeat_milliseconds
+                undo_many_count
                 repeated_pasting
                 automatic_branching
                 script_delay_milliseconds
@@ -356,7 +359,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit repeated_pasting automatic_branching display_palette_index display_color display_key)) {
+            for my $option (qw(autosave_on_exit use_compressed_files repeated_pasting automatic_branching display_palette_index display_color display_key)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -375,56 +378,20 @@ sub new { #{{{1
     $sizer->Add($tool_panel);
 
     $self->action($AC_PAINT);
+    $self->previous_action($AC_PAINT);
     $self->mode($MO_TILE);
     $self->erase_mode($AM_CURRENT);
     $self->select_mode($AM_CURRENT);
     $self->current_side($SI_RIGHT);
 
-
-
-
-
-
-
-
     my $canvas_side_sizer = Wx::BoxSizer->new(wxVERTICAL);
 
-    $self->canvas_scroller(my $canvas_scroller = Wx::ScrolledWindow->new($self, -1 ));
-    $canvas_scroller->SetSizer(my $scrolling_sizer = Wx::BoxSizer->new(wxVERTICAL));
-
-    $self->canvas(IsoGlCanvas->new($canvas_scroller, $scene, -1, undef, [ 300, 300 ]));
-    $self->canvas_sizer_item($scrolling_sizer->Add($self->canvas, 1, wxEXPAND));
-
-#    $self->canvas_sizer_item->SetProportion(0);
-#    $self->canvas_sizer_item->SetFlag(0);
-    $self->canvas->SetSize([1000,1000]);
-#    $canvas_scroller->SetVirtualSize(1000,1000);
-#    $self->canvas_scroller->GetSizer->Layout;
-
-#    $self->canvas_sizer_item->SetProportion(1);
-#    $self->canvas_sizer_item->SetFlag(wxEXPAND);
-#    # $self->canvas->SetSize([1000,1000]);
-#    $self->canvas_scroller->GetSizer->Layout;
-
-    $canvas_side_sizer->Add($canvas_scroller, 1, wxEXPAND);
-
-
-
-
-
-
-
-
-
-
-
-
-#    $self->canvas(IsoGlCanvas->new($self, $scene));
+    $self->canvas(IsoGlCanvas->new($self, $scene));
 
     # fix redo button in case we saved on a branch point
-    $self->canvas->set_undo_redo_button_states;
+#    $self->canvas->set_undo_redo_button_states;
 
-#    $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
+    $canvas_side_sizer->Add($self->canvas, 1, wxEXPAND );
 
     # branch choice panel
     $self->branch_choice_pnl( $app->xrc->LoadPanel($self, 'choose_branch') );
@@ -445,13 +412,6 @@ sub new { #{{{1
     Wx::Event::EVT_SLIDER($self, $self->export_options_pnl->FindWindow('pixels_per_tile_sld'), sub {
         my ($frame, $event) = @_;
         $log->info("slider @_");
-
-#        $self->canvas_sizer_item->SetProportion(0);
-#        $self->canvas_sizer_item->SetFlag(0);
-#        $self->canvas_scroller->SetVirtualSize(650,800);
-        $self->canvas_scroller->SetScrollbars(1, 1, 1, 1);
-        $self->canvas->SetSize([650,800]);
-        $self->Refresh;
 
         $event->Skip;
         return;
@@ -501,6 +461,7 @@ sub change_action { #{{{1
     my ($self, $action) = @_;
 
     $log->debug("change_action $action");
+    $self->previous_action($self->action);
 
     # changing to another action during paste cancels the paste
     if ($self->action eq $AC_PASTE) {
@@ -531,7 +492,7 @@ sub change_action { #{{{1
         }
 
         # revert to paint
-        $action = $AC_PAINT;
+        $action = $self->previous_action;
     }
     elsif ($action eq $AC_SHADE_CUBE) {
 
@@ -551,7 +512,7 @@ sub change_action { #{{{1
         $self->update_scene_color($side);
 
         # revert to paint
-        $action = $AC_PAINT;
+        $action = $self->previous_action;
     }
 
     # changing action during move mode cancels the move; we've probably forgotten move is on
@@ -582,6 +543,10 @@ sub do_menu_choice { #{{{1
     my $app = wxTheApp;
 
     if ($string eq $MI_SAVE) {
+
+        # Autosave makes this fairly pointless, unless you're paranoid. Make it
+        # useful by also emptying the new hash, thus speeding up work.
+        $self->canvas->make_new_permanent;
         $self->save_to_file;
     }
     elsif ($string eq $MI_OPEN) {
@@ -596,6 +561,7 @@ sub do_menu_choice { #{{{1
         $self->Refresh;
     }
     elsif ($string eq $MI_SAVE_AS) {
+
         my $old_name = $app->scene->filename;
 
         # clear the name so the file dialog opens for a new name
@@ -633,19 +599,12 @@ sub do_menu_choice { #{{{1
     }
     elsif ($string eq $MI_EXPORT) {
 
-        # change
-        $self->canvas_sizer_item->SetProportion(0);
-        $self->canvas_sizer_item->SetFlag(0);
-        $self->canvas_scroller->SetVirtualSize(650,800);
-        $self->canvas_scroller->SetScrollbars(1, 1, 1, 1);
-        $self->canvas->SetSize([650,800]);
-
         # display the export panel. Normal drawing operations can continue while this panel is displayed.
         wxTheApp->load_panel_settings($self->export_options_pnl);
         $self->export_options_pnl->Show;
+        my @size = $self->export_options_pnl->GetSizeWH;
+        $app->scene->origin_y($app->scene->origin_y - $size[1] * $app->scene->scale);
         $self->Layout;
-        $self->canvas->SetSize([650,800]);
-        $self->canvas->Layout;
     }
     elsif ($string eq $MI_IMPORT) {
         my $dialog = Wx::FileDialog->new( $self,
@@ -681,11 +640,16 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|repeated_pasting|automatic_branching|display_palette_index|display_color|display_key/) {
+        if ($option =~ /autosave_on_exit|use_compressed_files|repeated_pasting|automatic_branching|display_palette_index|display_color|display_key/) {
             $app->config->$option($app->config->$option ? 0 : 1);
+            $log->info("config setting for $option is now " . $app->config->$option);
         }
         elsif (defined(my $value = $self->change_value($option, $app->config->$option))) {
             $app->config->$option($value);
+        }
+        if ($option =~ /display/) {
+            $self->canvas->rebuild_render_group('permanent');
+            $self->canvas->rebuild_render_group('new');
         }
         $self->canvas->Refresh;
     }
@@ -1047,7 +1011,7 @@ sub save_to_file { #{{{1
             'Save Scene to file',
             '',
             '',
-            'IsoScene files (*.isz)|*.isz',
+            'IsoScene files (*.isz;*.isc)|*.isz;*.isc',
             wxFD_SAVE);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;
@@ -1055,8 +1019,6 @@ sub save_to_file { #{{{1
         $file = File::Basename::basename($file, '.isz');
         $scene->filename($file);
     }
-
-    my $busy = new Wx::BusyCursor;
 
     $scene->save;
 
@@ -1074,7 +1036,7 @@ sub open_from_file { #{{{1
             'Open Scene from file',
             '',
             '',
-            'IsoScene files (*.isz)|*.isz',
+            'IsoScene files (*.isz;*.isc)|*.isz;*.isc',
             wxFD_OPEN);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;
@@ -1105,18 +1067,16 @@ sub finish_export_panel { #{{{1
     my ($self, $event) = @_;
 
     my $button = $event->GetEventObject;
-    $log->info("finish_export_panel: " . $button->GetName);
 
+    my $app = wxTheApp;
     if ($button->GetName eq 'export_btn') {
-        wxTheApp->save_panel_settings($self->export_options_pnl);
+        $app->save_panel_settings($self->export_options_pnl);
         $self->canvas->export_scene;
     }
 
-    $self->canvas_sizer_item->SetProportion(1);
-    $self->canvas_sizer_item->SetFlag(wxEXPAND);
-    $self->canvas_scroller->SetScrollbars(0,0,0,0);
-
+    my @size = $self->export_options_pnl->GetSizeWH;
     $self->export_options_pnl->Hide;
+    $app->scene->origin_y($app->scene->origin_y + $size[1] * $app->scene->scale);
     $self->Layout;
 
     return;
@@ -1131,6 +1091,8 @@ sub start_undo_or_redo { #{{{1
     # on continuous with the quick period.
     $self->undo_timer->Start(wxTheApp->config->undo_wait_milliseconds, wxTIMER_ONE_SHOT);
     $self->undo_or_redo_flag($flag);
+
+    # do the correct action immediately on mouse down
     $self->canvas->undo_or_redo();
 
     return;
@@ -1387,7 +1349,6 @@ sub do_undo_redo_tool { #{{{1
         # remember the original branch in case we cancel, and the current action so we can 
         # restore it after the change.
         $frame->original_branch($branch_node->{current_branch});
-        $frame->previous_action($frame->action);
 
         # the size of the undo stack is our reference point; when we change branches, we must undo to this
         # point before redoing the new branch
@@ -1405,14 +1366,18 @@ sub do_undo_redo_tool { #{{{1
         wxTheApp->autosave_timer->Stop;
 
     }
+    elsif ($button_name =~ /(?:undo|redo)_many/) {
+
+        $frame->canvas->undo_or_redo($button_name eq 'redo_many', 1, 1);
+        $frame->canvas->rebuild_and_refresh(1,1);
+    }
     elsif ($button_name eq 'undo_to_branch') {
         if (@{ $frame->canvas->scene->undo_stack }) {
             while (1) {
                 last unless $frame->canvas->undo_or_redo(0,1);
                 last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
             }
-            $frame->canvas->set_undo_redo_button_states;
-            $frame->canvas->Refresh;
+            $frame->canvas->rebuild_and_refresh(1,1);
         }
         else {
             $frame->display_message("There are no actions to undo.");
@@ -1424,8 +1389,7 @@ sub do_undo_redo_tool { #{{{1
                 last unless $frame->canvas->undo_or_redo(1,1);
                 last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
             }
-            $frame->canvas->set_undo_redo_button_states;
-            $frame->canvas->Refresh;
+            $frame->canvas->rebuild_and_refresh(1,1);
         }
         else {
             $frame->display_message("There are no actions to redo.");
@@ -1444,7 +1408,7 @@ sub do_undo_redo_tool { #{{{1
                     branches => [ $action ],
                 };
                 push @{ $frame->canvas->scene->redo_stack }, $branch_node;
-
+                $frame->display_message("Branch created.");
             }
             else {
                 $frame->display_message("There is already a branch at this point.");
@@ -1498,7 +1462,7 @@ sub finish_branch_choice { #{{{1
     $self->canvas->set_undo_redo_button_states;
     $self->Layout;
 
-    wxTheApp->autosave_timer->Start(wxTheApp->config->autosave_period_seconds * 1000, wxTIMER_CONTINUOUS);
+    wxTheApp->autosave_timer->Start(wxTheApp->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
 
     return;
 }
