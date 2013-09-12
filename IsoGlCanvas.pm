@@ -915,7 +915,7 @@ sub rebuild_render_group { #{{{1
 
     # while we're doing area select/deselect, keys in transient are also relevant,
     # but how so depends on select_toggle.
-    if ($self->frame->action =~ /select/ && $self->frame->mode eq $IsoFrame::MO_AREA && $group_id eq 'select') {
+    if ($self->frame->action =~ /select/ && $self->frame->area_mode && $group_id eq 'select') {
         if ($self->select_toggle) {
 
             # we're selecting, so the transient hash is an extra source of selected tiles
@@ -1281,7 +1281,7 @@ sub set_cursor { #{{{1
     my ($self) = @_;
 
     my $frame = $self->frame;
-    my $cursor = $frame->mode eq $IsoFrame::MO_MOVE
+    my $cursor = $frame->pan_mode
         ? $self->action_cursor->{move}
         : $self->action_cursor->{$frame->action};
     $log->logconfess("no cursor for action " . $frame->action)
@@ -1367,7 +1367,8 @@ sub mouse_event_handler { #{{{1
     my $refresh;
     my @refresh_corners;
     my $frame = $self->frame;
-    my $mode = $frame->mode;
+    my $area_mode = $frame->area_mode;
+    my $pan_mode = $frame->pan_mode;
     my $side = $frame->current_side;
     my $action = $frame->action;
     my $app = wxTheApp;
@@ -1394,7 +1395,7 @@ sub mouse_event_handler { #{{{1
 #            @refresh_corners = ($device_x, $self->last_device_x, $device_y, $self->last_device_y);
 #        }
     }
-    elsif ($event_flags == 0 && $mode ne $IsoFrame::MO_MOVE ) {
+    elsif ($event_flags == 0 && ! $pan_mode ) {
         
         # we haven't changed triangle, we're not moving the offset
         # and we haven't pressed a button; bail
@@ -1404,7 +1405,7 @@ sub mouse_event_handler { #{{{1
     if ($event_flags & $ME_LEFT_BUTTON) {
 
         # in move mode, left button down/up toggles dragging flag
-        if ($mode eq $IsoFrame::MO_MOVE) {
+        if ($pan_mode) {
             $self->dragging($event_flags & $ME_BUTTON_DOWN);
             $log->debug("dragging now? " . $self->dragging);
             return;
@@ -1414,7 +1415,7 @@ sub mouse_event_handler { #{{{1
         if ($event_flags & $ME_BUTTON_DOWN) {
             $refresh = 1;
             $self->paint_shape($side);
-            $self->area_start( $mode eq $IsoFrame::MO_AREA
+            $self->area_start( $area_mode
                 ? [ $left, $top, $right, $facing ]
                 : undef);
 
@@ -1424,7 +1425,7 @@ sub mouse_event_handler { #{{{1
                 my $palette_index = $self->get_palette_index($frame->cube_brush->{$side}->GetColour->GetAsString(wxC2S_HTML_SYNTAX));
                 $self->brush_index($palette_index);
             }
-            elsif ($action =~ /erase/ && $mode eq $IsoFrame::MO_AREA) {
+            elsif ($action =~ /erase/ && $area_mode) {
 
                 # we're starting an area erase; add all visible tiles to new so we only have to refresh that array on every move,
                 # not permanent as well.
@@ -1467,9 +1468,7 @@ sub mouse_event_handler { #{{{1
             $self->paint_shape(0);
 
             if ($action eq $IsoFrame::AC_SAMPLE) {
-
-                $frame->action($frame->previous_action);
-
+                $frame->action($frame->previous_paint_action);
                 $self->set_cursor;
                 $frame->update_scene_color($side);
                 $frame->Refresh;
@@ -1479,6 +1478,7 @@ sub mouse_event_handler { #{{{1
                 $self->import_bitmap($side);
                 $frame->action($frame->previous_action);
                 $self->set_cursor;
+                $self->rebuild_render_group('new');
                 $frame->Refresh;
             }
 
@@ -1501,7 +1501,7 @@ sub mouse_event_handler { #{{{1
                 $frame->Refresh;
             }
 
-            if ($mode eq $IsoFrame::MO_AREA) {
+            if ($area_mode) {
 
                 # clear area size message
                 wxTheApp->set_frame_title();
@@ -2051,14 +2051,25 @@ sub paint_tile { #{{{1
     if (my $tile = $self->grid->{$grid_key}) {
         if ($tile->{shape} eq $shape) {
             $log->debug("duplicate tile, change colour TODO");
-            return 0;
+
+            if (wxTheApp->config->repaint_same_tile) {
+                $tile->{brush_index} = defined $brush_index ? $brush_index : $self->brush_index;
+                $log->info("repaint_same_tile with $tile->{brush_index}");
+
+                # if this tile wasn't part of new, make it so (and rebuild permanent)
+                $self->key_hash->{new}->{$grid_key} = 1;
+                return $grid_key;
+            }
+            else {
+                return 0;
+            }
         }
     }
 
     my $action = $self->frame->action;
 
     # check for existing tiles that overlap.
-    my $doing_shade_area = $action eq $IsoFrame::AC_SHADE_CUBE && $self->frame->mode eq $IsoFrame::MO_AREA;
+    my $doing_shade_area = $action eq $IsoFrame::AC_SHADE_CUBE && $self->frame->area_mode;
     my $shifts = 0;
     $log->logconfess("no clashes for $shape") unless $Shape_clashes{$shape};
     for my $shift_point ( @{ $Shape_clashes{$shape} } ){
@@ -2142,7 +2153,7 @@ sub shade_cube { #{{{1
 
     my $frame = $self->frame;
     my $refresh;
-    my $area_mode = $frame->mode eq $IsoFrame::MO_AREA;
+    my $area_mode = $frame->area_mode;
 
     # try to find a tile initially; we don't want to use paint_tile as that will paint
     # a triangle if it can, ie in the "other" half of the tile. If we hit anything,
@@ -2621,294 +2632,6 @@ sub calculate_grid_dims { #{{{1
 
     return;
 }
-
-################################################################################
-#sub draw_scene { #{{{1
-#    my ($self, $dc, %param) = @_;
-#
-#    my $frame = $self->frame;
-#    my $current_brush = 0;
-#
-#    my ($TB_TRANSPARENT, $TB_NORMAL, $TB_MATCHING_TILE) = qw(transparent normal matching_tile);
-#    my $tile_border = $self->scene->tile_border;
-#    $tile_border = $TB_TRANSPARENT if $param{tb_transparent_rbn};
-#    $tile_border = $TB_NORMAL if $param{tb_normal_rbn};
-#    $tile_border = $TB_MATCHING_TILE if $param{tb_matching_tile_rbn};
-#
-#    # my $start_draw = [ gettimeofday ];
-#
-##    $dc->DrawLine(0, 0, 0, $self->y_grid_size);
-##    $dc->DrawLine(0, 0, $self->x_grid_size, $self->y_grid_size / 2);
-##    $dc->DrawLine($self->x_grid_size, $self->y_grid_size / 2, 0, $self->y_grid_size);
-#
-##    for my $left (-5 .. 5) {
-##        for my $top (-5 .. 5) {
-##            my $x = $top * $self->x_grid_size;
-##            my $y = ($left + $top / 2) * $self->y_grid_size;
-##            my $right = $left + $top;
-##            $dc->DrawText("$left,$top,$right", $x,$y);
-##        }
-##    }
-#
-##    my @key;
-##    my @anchor;
-##    (my $min_x, my $min_y, $key[0], $key[1], $anchor[0], $anchor[1], my $facing) = @stash;
-##    if (defined $min_x) {
-###        $log->info("min_x $min_x, min_y $min_y, key @key, anchor @anchor, facing $facing");
-###        $dc->DrawRectangle($min_x * $self->x_grid_size, $min_y * $self->y_grid_size, $self->x_grid_size, $self->y_grid_size);
-###        $dc->SetPen(wxRED_PEN);
-###        $dc->DrawCircle(@key, 20);
-##        $dc->SetPen(wxGREEN_PEN);
-##        $dc->SetBrush(wxTRANSPARENT_BRUSH);
-##        $dc->DrawCircle(@anchor, 20);
-##    }
-#
-##    return;
-#
-#    if ($tile_border eq $TB_TRANSPARENT) {
-#        $dc->SetPen(wxTRANSPARENT_PEN);
-#    }
-#    else {
-#        $dc->SetPen($self->tile_line_pen);
-#    }
-#
-#    my $palette = $self->palette;
-#
-#    # use the previous list of painted keys (if we haven't moved or scaled)
-#    # or use the whole scene
-#    my $tile_keys = $self->tile_cache 
-#        || [ keys %{ $self->grid } ];
-##        || [ map { join('_', @{ $_ }{qw( facing left top right )}) } values %{ $self->grid } ];
-#    my @new_cache = ();
-#    my %tick_offset = (
-#        $IsoFrame::SI_LEFT  => [ 5, 55 ],
-#        $IsoFrame::SI_TOP   => [ 53, -27 ],
-#        $IsoFrame::SI_RIGHT => [ 5, -20 ],
-#        TL                  => [ 28, -22, ],
-#        TR                  => [ 5, 42, ],
-#    );
-#    my $bitmap = wxTheApp->bitmap;
-#    my $select_toggle = $self->select_toggle;
-#    my $action = $self->frame->action;
-#    my $doing_select = $action =~ /select/;
-#
-#    # if we're in progress while painting an area or pasting (ie before the closing mouse up event),
-#    # also check the keys from the selected_tile hash. Make this a separate pass so we don't add 
-#    # these keys to the cache if we're creating it.
-#    my @passes = (0);
-#    if ($action eq $IsoFrame::AC_PASTE || ($action eq $IsoFrame::AC_PAINT && $self->area_start)) {
-#        push @passes, 1;
-#    }
-#
-#    my $config = wxTheApp->config;
-#    my %shape_text_offset = (
-#        $SH_LEFT => [ -4, 30 ],
-#        $SH_TOP => [ 20, -22 ],
-#        $SH_RIGHT => [ 0, 0 ],
-#        $SH_TRIANGLE_LEFT => [ 20, -22 ],
-#        $SH_TRIANGLE_RIGHT => [ -4, 37 ],
-#    );
-#
-#    my $big_font = $dc->GetFont;
-#    $big_font->SetPointSize(24);
-#    my $small_font = $dc->GetFont;
-#    $small_font->SetPointSize(16);
-#
-#    for my $pass (@passes) {
-#
-##        $log->info("pass $pass");
-#
-#        # The ?: operator short-circuits so we don't get the selected_tile keys unless we need them.
-#        for my $grid_key ($pass == 0 ? @{ $tile_keys } : keys %{ $self->selected_tile }) {
-#
-##            $log->info("paint $grid_key");
-#            my $tile = $self->grid->{$grid_key};
-#
-#            # skip this stuff for temporary tiles
-#            if ($pass == 0) {
-#
-#                # filter deleted items when deleting area
-#                next if $self->transient_key->{$grid_key};
-#
-#                # individual deleted tiles will still be in the key list but won't be found
-#                next unless $tile;
-#
-#                # if we don't have a tile cache, filter by visible location and
-#                # build the new cache
-#                unless ($self->tile_cache) {
-#                    next if $tile->{top} < ($self->min_x_grid - 1) || $tile->{top} > $self->max_x_grid;
-#                    my $y_grid = ($tile->{left} + $tile->{right}) / 2;
-#                    next if $y_grid < $self->min_y_grid || $y_grid > $self->max_y_grid;
-#
-#                    push @new_cache, $grid_key;
-#                }
-#            }
-#
-#    #        $log->debug(sprintf "draw $tile->{shape} $grid_key at %f, %f",
-#    #            $tile->{top} * $self->x_grid_size,
-#    #            ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size);
-#
-#            $dc->SetBrush($palette->[ $tile->{brush_index} ]);
-#
-#            if ($tile_border eq $TB_MATCHING_TILE) {
-#                $dc->SetPen(Wx::Pen->new($dc->GetBrush->GetColour,1,wxPENSTYLE_SOLID));
-#            }
-#
-#            my $shape = $Tile_shape->{ $tile->{shape} }
-#                or $log->logdie("bad tile shape $tile->{shape}");
-#
-#            my @anchor = (
-#                $tile->{top} * $self->x_grid_size,
-#                ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size,
-#            );
-#            $dc->DrawPolygon( $shape, @anchor);
-#
-#            if ($config->display_palette_index || $config->display_color || $config->display_key) {
-#
-#                my @strings = (
-#                    $config->display_palette_index ? $tile->{brush_index} : '',
-#                    $config->display_color ? $self->scene->palette->[ $tile->{brush_index} ] : '',
-#                    $config->display_key ? join(':', @{ $tile }{qw(shape left top right)}) : '',
-#                );
-#                $strings[1] =~ s/#//;
-#
-#                my $text_offset = $shape_text_offset{ $tile->{shape} };
-#
-#                # display in 2 colours so we are somewhat readable against any background.
-#                my @colours = (wxBLACK, wxWHITE);
-#                my @fonts = ($big_font, $small_font, $small_font);
-#                for my $string_index (0,1,2) {
-#                    next unless length $strings[$string_index];
-#                    $dc->SetFont($fonts[$string_index]);
-#                    for my $colour_index (0,1) {
-#                        $dc->SetTextForeground($colours[$colour_index]);
-#                        $dc->DrawText($strings[$string_index],
-#                            $anchor[0] + 10 - $string_index + $text_offset->[0], 
-#                            $anchor[1] + 1 - $string_index + $text_offset->[1] + 23 * $string_index
-#                        );
-#                    }
-#                }
-#
-#            }
-#
-#            # draw selected images, including temporary selections (or deselections) during area select
-#            my $part_of_area_select = defined $self->selected_tile->{$grid_key} && $action =~ /select/;
-#            if (($tile->{selected} && ($select_toggle || ! $part_of_area_select || ! $doing_select))
-#                || ($select_toggle && $part_of_area_select) )
-#            {
-#                $dc->DrawBitmap($bitmap->{"tick_$tile->{shape}"},
-#                    $tile->{top} * $self->x_grid_size + $tick_offset{$tile->{shape}}->[0],
-#                    ($tile->{left} + $tile->{top} / 2) * $self->y_grid_size + $tick_offset{$tile->{shape}}->[1],
-#                    1,
-#                );
-#            }
-#        }
-#    }
-#
-#    # $log->info(sprintf "draw_scene: painted tiles after %.6f", tv_interval($start_draw));
-#
-#    unless ($self->tile_cache) {
-#        $log->debug("built new cache with $#new_cache+1 tiles");
-#        $self->tile_cache(\@new_cache);
-#    }
-#
-#    # draw current location unless we're exporting; just check for any key from export_options
-#    if ((my $current_location = $self->current_location) && ! defined $param{a4_rbn}) {
-#        my ($left, $top, $right, $facing) = @{ $current_location };
-#
-#        # here, we can equate side with shape
-#        my $shape = $self->frame->current_side;
-#
-#        # change the grid key according to the shape if we're in the wrong triangle;
-#        if ($shape eq $SH_LEFT && $facing eq $SH_LEFT) {
-#            $left--;
-#            $right--;
-#        }
-#        elsif ($shape eq $SH_TOP && $facing eq $SH_RIGHT) {
-#            $left++;
-#            $top--;
-#        }
-#
-#        if (my $paste_list = $self->paste_list) {
-#
-##            for my $tile ( @{ $paste_list } ) {
-##
-##                $dc->SetBrush($palette->[ $tile->{brush_index} ]);
-##
-##                my $shape = $Tile_shape->{ $tile->{shape} }
-##                    or $log->logdie("bad tile shape $tile->{shape}");
-##
-##                # coords in paste tiles are offsets from current location
-##                my $adjusted_top = $top + $tile->{top};
-##                $dc->DrawPolygon(
-##                    $shape->{polygon_points}, 
-#                    $adjusted_top * $self->x_grid_size,
-#                    ($left + $tile->{left} + $adjusted_top / 2) * $self->y_grid_size,
-##                );
-#            }
-#        }
-#        else {
-#
-#            my $polygon_points = [];
-#            my $tile_shape = $Tile_shape->{$shape};
-#
-#            if ($self->cursor_multiplier_x > 1 || $self->cursor_multiplier_y > 1) {
-#                my $shape_multiplier = {
-#                    $SH_LEFT => [
-#                        [ 1,1 ],
-#                        [ $self->cursor_multiplier_x, $self->cursor_multiplier_x ],
-#                        [ $self->cursor_multiplier_x, ($self->cursor_multiplier_y * 2 + $self->cursor_multiplier_x) / 3 ],
-#                        [ 1, $self->cursor_multiplier_y, ],
-#                    ],
-#                    $SH_TOP => [
-#                        [ 1,1 ],
-#                        [ $self->cursor_multiplier_x, $self->cursor_multiplier_x, ],
-#                        [ ($self->cursor_multiplier_x + $self->cursor_multiplier_y) / 2, 0 ],
-#                        [ $self->cursor_multiplier_y, $self->cursor_multiplier_y ],
-#                    ],
-#                    $SH_RIGHT => [
-#                        [ 1,1 ],
-#                        [ 1, $self->cursor_multiplier_y, ],
-#                        [ $self->cursor_multiplier_x, $self->cursor_multiplier_y * 2 - $self->cursor_multiplier_x ],
-#                        [ $self->cursor_multiplier_x, $self->cursor_multiplier_x ],
-#                    ],
-#                };
-#                my $multipliers = $shape_multiplier->{ $shape };
-#                for my $i (0 .. 3) {
-#
-#                    # there's one corner in one shape that needs something more; top shape, 3rd corner
-#                    # (ie right hand corner) has a Y coord of 0, so multiplying it by anything doesn't
-#                    # work. Just calculate it directly for that case.
-#                    my $third_top_y_coord = $shape eq $SH_TOP && $i == 2
-#                        ? ($self->cursor_multiplier_x - $self->cursor_multiplier_y) * ($self->y_grid_size / 2)
-#                        : 0;
-#
-#                    push @{ $polygon_points }, Wx::Point->new(
-#                        $tile_shape->{points}->[$i]->[0] * $multipliers->[$i]->[0],
-#                        $tile_shape->{points}->[$i]->[1] * $multipliers->[$i]->[1] + $third_top_y_coord,
-#                    );
-#                }
-#            }
-#            else {
-#
-#                for my $point (@{ $tile_shape->{points} }) {
-#                    push @{ $polygon_points }, Wx::Point->new( @{ $point } );
-#                }
-#            }
-#
-#            $dc->SetBrush(wxTRANSPARENT_BRUSH);
-#            $dc->SetPen(Wx::Pen->new(wxRED,4,wxPENSTYLE_SOLID));
-#            $dc->DrawPolygon(
-#                $polygon_points, 
-#                $top * $self->x_grid_size,
-#                ($left + $top / 2) * $self->y_grid_size,
-#            );
-#        }
-#    }
-#    # $log->info(sprintf "draw_scene: finished      after %.6f", tv_interval($start_draw));
-#
-#    return;
-#}
 
 ################################################################################
 sub export_scene { #{{{1

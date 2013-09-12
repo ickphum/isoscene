@@ -29,7 +29,7 @@ use IsoPasteSelector;
 __PACKAGE__->mk_accessors( qw(
     tool_panel canvas branch_choice_pnl message_pnl export_options_pnl
 
-    mode action previous_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
+    area_mode pan_mode action previous_action previous_paint_action mode_btn action_btn erase_mode select_mode clipboard_btn misc_btn
 
     cube_x cube_y cube_width cube_height cube_brush
     _current_side
@@ -72,9 +72,8 @@ our %OTHER_SIDES = (
 our (
     $MO_TILE,
     $MO_AREA,
-    $MO_FLOOD,
     $MO_MOVE,
-    ) = qw(tile area flood move);
+    ) = qw(tile area move);
 
 our (
     $AM_CURRENT,
@@ -257,12 +256,6 @@ sub new { #{{{1
 
     $self->misc_btn({});
 
-#    my $flood_btn = $self->misc_btn->{flood} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{flood_off});
-#    $self->mode_btn->{$MO_FLOOD} = $flood_btn;
-#    Wx::Event::EVT_BUTTON($self, $flood_btn, sub { $_[0]->change_mode($MO_FLOOD); });
-#    push @column_buttons, $flood_btn;
-#    push @column_buttons, 0;
-
     my $button = $self->misc_btn->{selection_tools} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{selection_tools} );
     $button->SetToolTip("Selection Tools");
     Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(select_all select_none select_visible) ], \&do_selection_tool, $button->GetScreenPosition); });
@@ -340,6 +333,7 @@ sub new { #{{{1
                 undo_repeat_milliseconds
                 undo_many_count
                 repeated_pasting
+                repaint_same_tile
                 automatic_branching
                 script_delay_milliseconds
                 shade_change
@@ -359,7 +353,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit use_compressed_files repeated_pasting automatic_branching display_palette_index display_color display_key)) {
+            for my $option (qw(autosave_on_exit use_compressed_files repeated_pasting repaint_same_tile automatic_branching display_palette_index display_color display_key)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -379,7 +373,9 @@ sub new { #{{{1
 
     $self->action($AC_PAINT);
     $self->previous_action($AC_PAINT);
-    $self->mode($MO_TILE);
+    $self->previous_paint_action($AC_PAINT);
+    $self->area_mode(0);
+    $self->pan_mode(0);
     $self->erase_mode($AM_CURRENT);
     $self->select_mode($AM_CURRENT);
     $self->current_side($SI_RIGHT);
@@ -462,6 +458,7 @@ sub change_action { #{{{1
 
     $log->debug("change_action $action");
     $self->previous_action($self->action);
+    $self->previous_paint_action($self->action) if $self->action eq $AC_PAINT || $self->action eq $AC_SHADE_CUBE;
 
     # changing to another action during paste cancels the paste
     if ($self->action eq $AC_PASTE) {
@@ -492,7 +489,7 @@ sub change_action { #{{{1
         }
 
         # revert to paint
-        $action = $self->previous_action;
+        $action = $self->previous_paint_action;
     }
     elsif ($action eq $AC_SHADE_CUBE) {
 
@@ -512,17 +509,14 @@ sub change_action { #{{{1
         $self->update_scene_color($side);
 
         # revert to paint
-        $action = $self->previous_action;
+        $action = $self->previous_paint_action;
     }
 
     # changing action during move mode cancels the move; we've probably forgotten move is on
     # and are about to use the new action.
-    if ($self->mode eq $MO_MOVE) {
-
-        # this looks weird but is due to the mode buttons being toggles;
-        # we're already in move mode, so doing this again turns it off.
-        $self->change_mode($MO_MOVE);
-    }
+    # this looks weird but is due to the mode buttons being toggles;
+    # we're already in move mode, so doing this again turns it off.
+    $self->change_mode($MO_MOVE) if $self->pan_mode;
 
     $self->action($action);
     $self->canvas->set_cursor;
@@ -640,7 +634,7 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|use_compressed_files|repeated_pasting|automatic_branching|display_palette_index|display_color|display_key/) {
+        if ($option =~ /autosave_on_exit|use_compressed_files|repeated_pasting|repaint_same_tile|automatic_branching|display_palette_index|display_color|display_key/) {
             $app->config->$option($app->config->$option ? 0 : 1);
             $log->info("config setting for $option is now " . $app->config->$option);
         }
@@ -696,24 +690,27 @@ sub change_value { #{{{1
 sub change_mode { #{{{1
     my ($self, $button_mode) = @_;
 
-    # mode buttons switch on from other modes or switch back to tile from themselves
-    my $new_mode = $self->mode eq $button_mode
-        ? $MO_TILE
-        : $button_mode;
-
-    for my $mode ($self->mode, $new_mode) {
-
-        # nothing to do when switching to TILE
-        next if $mode eq $MO_TILE;
-
-        my $image_stub = $mode eq $MO_AREA
-            ? "area_" . $self->current_side
-            : $mode;
-        IsoApp::set_button_bitmap($self->mode_btn->{$mode}, $new_mode eq $mode ? "${image_stub}_on" : "${image_stub}_off");
-        $self->mode_btn->{$mode}->Refresh;
+    # This has been changed from the mutex modes tile/pan/area; tile is now assumed 
+    # and the others have individual properties, the code knows which takes precedence,
+    # eg pan > area.
+    # There's probably an easier way to do this but I'm changing as little as possible.
+    #
+    # The only modes passed in are pan and area, which simply toggle their properties
+    # and change the button imagery as before.
+    my $flag;
+    if ($button_mode eq $MO_AREA) {
+        $self->area_mode($flag = ($self->area_mode ? 0 : 1));
+    }
+    elsif ($button_mode eq $MO_MOVE) {
+        $self->pan_mode($flag = ($self->pan_mode ? 0 : 1));
     }
 
-    $self->mode($new_mode);
+    my $image_stub = $button_mode eq $MO_AREA
+        ? "area_" . $self->current_side
+        : $button_mode;
+    $log->info("image_stub $image_stub");
+    IsoApp::set_button_bitmap($self->mode_btn->{$button_mode}, $flag ? "${image_stub}_on" : "${image_stub}_off");
+    $self->mode_btn->{$button_mode}->Refresh;
 
     $self->canvas->set_cursor;
 
@@ -820,7 +817,7 @@ sub change_side_colour { #{{{1
     $dialog->Destroy;
 
     $self->current_side($side);
-    $self->action($AC_PAINT);
+    $self->action($self->previous_paint_action);
     $self->canvas->set_cursor;
 
     $brush->SetColour($colour);
@@ -919,7 +916,7 @@ sub current_side { #{{{1
         $self->_current_side($side);
 
         # switch the image on the area button
-        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->mode eq $MO_AREA ? "area_${side}_on" : "area_${side}_off");
+        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->area_mode ? "area_${side}_on" : "area_${side}_off");
         $self->mode_btn->{$MO_AREA}->Refresh;
 
         # switch the images on the action buttons
@@ -1357,7 +1354,7 @@ sub do_undo_redo_tool { #{{{1
         $branch_chc->SetSelection($branch_node->{current_branch});
 
         $frame->change_action($AC_CHOOSE_BRANCH);
-        $frame->change_mode($MO_MOVE) unless $frame->mode eq $MO_MOVE;
+        $frame->change_mode($MO_MOVE) unless $frame->pan_mode;
         $frame->branch_choice_pnl->Show;
         $frame->toggle_tool_panel;
         $frame->Layout;

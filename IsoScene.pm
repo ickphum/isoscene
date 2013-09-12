@@ -45,10 +45,12 @@ sub new { # {{{1
     my ( $class, $arg ) = @_;
 
     my $use_compressed_files = wxTheApp->config->use_compressed_files;
+    $log->debug("new IsoScene : " . Dumper($arg));
 
     if ($arg->{file} && $arg->{file} !~ /\./) {
         $arg->{file} .= $use_compressed_files ? '.isz' : '.isc';
     }
+    $log->debug("loading $arg->{file}");
 
     my $app = wxTheApp;
     my $config = $app->config;
@@ -76,7 +78,7 @@ sub new { # {{{1
     };
 
     my $scene;
-    if ($arg->{file}) {
+    if ($arg->{file} && -f $arg->{file}) {
 
         # we assigned default extensions above, now respect whatever extension we find; you should
         # be able to either type of file in either mode (compressed or not).

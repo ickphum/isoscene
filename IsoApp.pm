@@ -71,8 +71,9 @@ sub new { # {{{1
     $self->config( IsoConfig->new() );
 
     # try to load the most recent file saved
+    my $extension = $self->config->use_compressed_files ? '.isz' : '.isc';
     my $filename = $option->{file} ||
-        ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . '.isz')
+        ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . $extension)
             ? $self->config->previous_scene_files->[-1]
             : undef);
 

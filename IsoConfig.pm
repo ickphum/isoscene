@@ -25,6 +25,7 @@ __PACKAGE__->mk_accessors( qw(
     undo_repeat_milliseconds
     undo_many_count
     repeated_pasting
+    repaint_same_tile
     automatic_branching
     shade_change
     darken_lighten_change
@@ -57,6 +58,7 @@ sub new { # {{{1
         undo_repeat_milliseconds => 20,
         undo_many_count => 100,
         repeated_pasting => 1,
+        repaint_same_tile => 0,
         automatic_branching => 0,
         shade_change => 30,
         darken_lighten_change => 30,
