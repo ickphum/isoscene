@@ -624,9 +624,18 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         if (my $value = $self->change_value($option, $app->scene->$option)) {
             $app->scene->$option($value);
-            $self->canvas->background_brush(Wx::Brush->new(Wx::Colour->new($app->scene->background_rgb), wxBRUSHSTYLE_SOLID)) if $option eq 'background_rgb';
-            $self->canvas->bg_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->bg_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'bg_line_rgb';
-            $self->canvas->tile_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->tile_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'tile_line_rgb';
+
+            if ($option eq 'background_rgb') {
+                my $color = Wx::Colour->new($app->scene->background_rgb);
+
+                # glClearColor demands floats, whereas glColor (which uses bg_line_color) can accept bytes
+                $self->canvas->background_color([ $color->Red / 255, $color->Green / 255, $color->Blue / 255 ] );
+            }
+            if ($option eq 'bg_line_rgb') {
+                my $color = Wx::Colour->new($app->scene->bg_line_rgb);
+                $self->canvas->bg_line_color([ $color->Red, $color->Green, $color->Blue ] );
+            }
+            # $self->canvas->tile_line_pen(Wx::Pen->new(Wx::Colour->new($app->scene->tile_line_rgb), 1, wxPENSTYLE_SOLID)) if $option eq 'tile_line_rgb';
             $self->canvas->Refresh;
         }
     }
@@ -708,7 +717,7 @@ sub change_mode { #{{{1
     my $image_stub = $button_mode eq $MO_AREA
         ? "area_" . $self->current_side
         : $button_mode;
-    $log->info("image_stub $image_stub");
+    $log->debug("image_stub $image_stub");
     IsoApp::set_button_bitmap($self->mode_btn->{$button_mode}, $flag ? "${image_stub}_on" : "${image_stub}_off");
     $self->mode_btn->{$button_mode}->Refresh;
 

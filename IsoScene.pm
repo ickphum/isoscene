@@ -50,7 +50,7 @@ sub new { # {{{1
     if ($arg->{file} && $arg->{file} !~ /\./) {
         $arg->{file} .= $use_compressed_files ? '.isz' : '.isc';
     }
-    $log->debug("loading $arg->{file}");
+    $log->debug("loading $arg->{file}") if $arg->{file};
 
     my $app = wxTheApp;
     my $config = $app->config;

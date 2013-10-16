@@ -31,7 +31,7 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
     device_width device_height
     current_view
     paint_shape
-    background_brush bg_line_pen tile_line_pen 
+    background_color bg_line_color 
     floodfill
     current_location current_grid_key
     area_start area_tiles select_toggle 
@@ -439,8 +439,6 @@ sub Resize { # {{{1
 
     return unless $self->GetContext;
 
-    glClearColor(0.5,0.5,0.8,0);
-
     $self->SetCurrent( $self->GetContext );
     glViewport( 0, 0, $width, $height );
 
@@ -495,36 +493,150 @@ sub calculate_grid_points { #{{{1
     my ($self) = @_;
 
     my ($width, $height) = $self->GetSizeWH;
+    my $scene = $self->scene;
+    my $scale = $scene->scale;
+    my $origin_x = $scene->origin_x;
+    my $origin_y = $scene->origin_y;
 
-    my $logical_width = $width * $self->scene->scale;
-    my $logical_height = $height * $self->scene->scale;
-    my $logical_origin_x = 0 - $self->scene->origin_x;
-    my $logical_origin_y = 0 - $self->scene->origin_y;
-    $log->debug("logical_origin $logical_origin_x, $logical_origin_y");
+    my $logical_width = $width * $scale;
+    my $logical_height = $height * $scale;
+    my $logical_origin_x = 0 - $origin_x;
+    my $logical_origin_y = 0 - $origin_y;
+    my $debug_logging = $log->debug("logical_origin $logical_origin_x, $logical_origin_y");
+
+    # find corner triangles; bottom left to top left, bottom right to top right
+    my @corners;
+    $corners[0] = [ $self->find_triangle_coords($logical_origin_x, $logical_origin_y) ];
+    $corners[1] = [ $self->find_triangle_coords($logical_origin_x, $logical_origin_y + $logical_height) ];
+    $corners[2] = [ $self->find_triangle_coords($logical_origin_x + $logical_width, $logical_origin_y) ];
+    $corners[3] = [ $self->find_triangle_coords($logical_origin_x + $logical_width, $logical_origin_y + $logical_height) ];
+
+    # we want to know the bottom left corner of a right-shaped tile containing the point; that corner
+    # is not the anchor of a right tile, but the sectors do not go by the same system.
+    # Whatever facing triangle we found, we want the anchor point immediately below it, due to the
+    # anchor placement on the triangles. We don't change the facing, we're just after the left and top coords.
+    for my $i (0 .. 3) {
+        $corners[$i]->[0]--;
+        $corners[$i]->[2]--;
+    }
+    $log->info("corners: " . Dumper(\@corners));
+
+    # We're using sectors based on R shaped tiles (arbitrarily chosen over L; T would have been less
+    # useful since they have no sides parallel with the window sides). This means that L and T tiles
+    # on the bottom and right edges respectively may extend past the edges of the sector as made up
+    # of R tiles. What this means in practice is that sectors that are just above or to the left of
+    # the visible area (and technically out of view) may need to be rendered as well in case such tiles exist.
+    # We'll accomplish this by moving the corners on the left edge outward (ie down and left for the
+    # bottom corner, up and left for the top corner) so that we'll include any sectors in this
+    # DANGER ZONE. We don't care about the corners on the right edge; we actually don't use the L and R
+    # coords from those corners at all, we just need the T coord of the top-right sector to terminate
+    # the loop which builds the sector list.
+
+    # move bottom left corner down and left
+    $corners[0]->[1]--;
+    $corners[0]->[2]--;
+
+    # move top left corner up and left
+    $corners[0]->[0]++;
+    $corners[0]->[1]--;
+
+    # find the sectors for each corner
+    my $sector_size = 3;
+    my @sectors = map { [ floor($_->[0]/$sector_size), floor($_->[1]/$sector_size) ] } @corners;
+    $log->info("sectors: " . Dumper(\@sectors));
+
+    # finding the vertical sector list along each edge is easy, we just fill in the gap between the
+    # respective corner pairs. finding the top and bottom edges is not so easy, since the required sectors
+    # will exhibit the usual sawtooth shape along these edges, and the top and bottom sawtooth shapes need not be 
+    # in sync; both will have two tiles with the same L coord, ie ramping up as T increases, then L drops. However,
+    # the points where L drops at top and bottom are not related.
+    # What we need to do (for each of top and bottom) is work out where in the sequence we are at the start; we will drop L after the first or
+    # second tile, and then every two tiles after that as we go across (increasing T by 1 per step).
+    # have to work out the shift from the left corner sectors to the top and bottom sectors in the next column.
+    # For each left corner, the next sector will either be left, top+1 or left-1,top+1. Once we know this, we have the 
+    # size of both even and odd sector strips and we can assemble the sector list.
+    # See sector_edges.jpg for diagrams; the reference line is labelled C.
+
+    # bottom left; there are two reference lines, 1 and 0.5 Y sector dim above the sector corner.
+    # Below the 0.5 line we're at stage 0 but we need to drop the corner by 1 dim, below
+    # the 1 line we're at stage 1, otherwise stage 0.
+    my $top_ref_line = ($sectors[0]->[0] + $sectors[0]->[1] / 2 + 1) * $self->y_grid_size * $sector_size;
+    my $bottom_ref_line = ($sectors[0]->[0] + $sectors[0]->[1] / 2 + 0.5) * $self->y_grid_size * $sector_size;
+    my $bottom_stage = 0;
+    if ($logical_origin_y <= $bottom_ref_line) {
+        $sectors[0]->[0]--;
+    }
+    elsif ($logical_origin_y <= $top_ref_line) {
+        $bottom_stage = 1;
+    }
+
+    # top left; reference line 0.5 and 1 Y dims above the sector corner. We never change the corner location
+    # in this case, but we may have to start at stage -1 so we get 3 initial raises.
+    $bottom_ref_line = ($sectors[1]->[0] + $sectors[1]->[1] / 2 + 0.5) * $self->y_grid_size * $sector_size;
+    $top_ref_line = ($sectors[1]->[0] + $sectors[1]->[1] / 2 + 1) * $self->y_grid_size * $sector_size;
+    my $top_edge = $logical_origin_y + $logical_height;
+    my $top_stage = $top_edge < $bottom_ref_line
+        ? 1
+        : $top_edge < $top_ref_line
+            ? 0
+            : -1;
+    $log->info(sprintf("logical_origin_y %d, logical_height %d, top corner %d, bottom_ref_line %d, top ref line %d",
+        $logical_origin_y, $logical_height, $logical_origin_y + $logical_height, $bottom_ref_line, $top_ref_line));
+    $log->info("bottom_stage $bottom_stage, top_stage $top_stage");
+
+    # we'll move across the grid, adding all sectors between top and bottom for each 
+    # column of sectors. We adjust the top and bottom coords using the stage fields.
+    # stop once we've done the final column.
+    my $sector_bottom = $sectors[0]->[0];
+    my $sector_top = $sectors[1]->[0];
+    for my $sector_column ($sectors[0]->[1] .. $sectors[2]->[1]) {
+
+        # $sector_row is actually the left coord of the sector
+        for my $sector_row ($sector_bottom .. $sector_top) {
+            push @sectors, [ $sector_row, $sector_column ];
+#            $log->info("add [ $sector_row, $sector_column ]");
+        }
+
+        $bottom_stage++;
+        if ($bottom_stage == 2) {
+            $bottom_stage = 0;
+            $sector_bottom--;
+        }
+
+        $top_stage++;
+        if ($top_stage == 2) {
+            $top_stage = 0;
+            $sector_top--;
+        }
+
+    }
 
     $self->init_render_group('grid');
 
     my @grid_points = ();
 
-    my $min_x_grid = floor($logical_origin_x / ($self->x_grid_size * 2));
-    my $max_x_grid = ceil(($logical_origin_x + $logical_width) / ($self->x_grid_size * 2));
-    my $min_x = $min_x_grid * $self->x_grid_size * 2;
-    my $max_x = $max_x_grid * $self->x_grid_size * 2;
-    $log->debug("min_x $min_x, max_x $max_x");
+    my $x_grid_size = $self->x_grid_size;
+    my $y_grid_size = $self->y_grid_size;
 
-    my $min_y_grid = floor($logical_origin_y / $self->y_grid_size);
-    my $min_y = $min_y_grid * $self->y_grid_size;
-    $log->debug("min_y $min_y");
+    my $min_x_grid = floor($logical_origin_x / ($x_grid_size * 2));
+    my $max_x_grid = ceil(($logical_origin_x + $logical_width) / ($x_grid_size * 2));
+    my $min_x = $min_x_grid * $x_grid_size * 2;
+    my $max_x = $max_x_grid * $x_grid_size * 2;
+    $log->debug("min_x $min_x, max_x $max_x") if $debug_logging;
+
+    my $min_y_grid = floor($logical_origin_y / $y_grid_size);
+    my $min_y = $min_y_grid * $y_grid_size;
+    $log->debug("min_y $min_y") if $debug_logging;
 
     # Draw vertical lines
     my $next_x_pos = $min_x;
     while ($next_x_pos < $logical_origin_x + $logical_width) {
         push @grid_points, $next_x_pos, $logical_origin_y, $next_x_pos, $logical_origin_y + $logical_height;
-        $next_x_pos += $self->x_grid_size;
+        $next_x_pos += $x_grid_size;
     }
 
     # drop/rise across the width between the x min & max grid lines
-    my $y_slope = ($max_x_grid - $min_x_grid) * $self->y_grid_size;
+    my $y_slope = ($max_x_grid - $min_x_grid) * $y_grid_size;
 
     # first loop; lines start at min y grid & move up until the line start is
     # above the top of the graph
@@ -538,24 +650,24 @@ sub calculate_grid_points { #{{{1
         # reverse x coords for left axes
         push @grid_points, $max_x, $min_y + $y_inc, $min_x, $min_y + $y_inc + $y_slope;
 
-        $y_inc += $self->y_grid_size;
+        $y_inc += $y_grid_size;
         $max_y_grid++;
     }
-    $log->debug("grid : x from $min_x_grid to $max_x_grid, y from $min_y_grid to $max_y_grid");
+    $log->debug("grid : x from $min_x_grid to $max_x_grid, y from $min_y_grid to $max_y_grid") if $debug_logging;
 
     # second loop; lines start 1 grid below min y grid (we've already drawn the axes
     # starting at min) and move down until the line end is below the bottom of the graph.
     # right & left axes done as above.
-    $y_inc = -$self->y_grid_size;
+    $y_inc = -$y_grid_size;
     while ($min_y + $y_inc + $y_slope > $logical_origin_y) {
         push @grid_points, $min_x, $min_y + $y_inc, $max_x, $min_y + $y_inc + $y_slope;
         push @grid_points, $max_x, $min_y + $y_inc, $min_x, $min_y + $y_inc + $y_slope;
-        $y_inc -= $self->y_grid_size;
+        $y_inc -= $y_grid_size;
     }
 
     # don't display a grid below a certain point, you couldn't pick a tile at this scale.
     # We still do the calculations because they give us the visible tiles.
-    if ($self->scene->scale < 8) {
+    if ($scale < 8) {
         push @{ $self->render_group->{grid}->{vertex}->{data} }, @grid_points;
     }
 
@@ -614,7 +726,7 @@ sub mark_visible_tiles { #{{{1
             $self->key_hash->{visible}->{$grid_key} = 1;
         }
     }
-    $log->debug("visible: " . Dumper($self->key_hash->{visible}));
+#    $log->debug("visible: " . Dumper($self->key_hash->{visible}));
 
     return;
 }
@@ -811,12 +923,14 @@ sub Render { # {{{1
     # Text; Permanent New Transient
     # Target
 
+    glClearColor(@{ $self->background_color }, 0);
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnableClientState(GL_VERTEX_ARRAY);
 
     # display the grid
     unless ($render_to_image) {
-        glColor3ub(0xaa, 0xaa, 0xaa);
+        glColor3ub(@{ $self->bg_line_color });
         $self->display_render_group('grid');
     }
 
@@ -873,7 +987,7 @@ sub Render { # {{{1
 sub rebuild_render_group { #{{{1
     my ($self, $group_id) = @_;
 
-    $log->debug("rebuild_render_group $group_id from " . (caller)[2]);
+    my $info_logging = $log->info("rebuild_render_group $group_id from " . (caller)[2]);
 
     my $config = wxTheApp->config;
 
@@ -1054,7 +1168,7 @@ sub rebuild_render_group { #{{{1
 sub preserve_transient_grid { #{{{1
     my ($self) = @_;
 
-    $log->debug("preserve_transient_grid from " . (caller)[2] . ", data " . Dumper($self->transient_grid));
+#    $log->debug("preserve_transient_grid from " . (caller)[2] . ", data " . Dumper($self->transient_grid));
 
     # copy tiles from transient_grid to scene and add keys to new
     my ($grid, $transient_grid) = ($self->grid, $self->transient_grid);
@@ -1239,9 +1353,11 @@ sub scene { #{{{1
             $self->palette_index->{$colour_str} = $i;
         }
 
-        $self->background_brush(Wx::Brush->new(Wx::Colour->new($scene->background_rgb), wxBRUSHSTYLE_SOLID));
-        $self->bg_line_pen(Wx::Pen->new(Wx::Colour->new($scene->bg_line_rgb), 1, wxPENSTYLE_SOLID));
-        $self->tile_line_pen(Wx::Pen->new(Wx::Colour->new($scene->tile_line_rgb), 1, wxPENSTYLE_SOLID));
+        my $color = Wx::Colour->new($scene->background_rgb);
+        $self->background_color([ $color->Red / 255, $color->Green / 255, $color->Blue / 255 ] );
+        $color = Wx::Colour->new($scene->bg_line_rgb);
+        $self->bg_line_color([ $color->Red, $color->Green, $color->Blue ] );
+        # $self->tile_line_pen(Wx::Pen->new(Wx::Colour->new($scene->tile_line_rgb), 1, wxPENSTYLE_SOLID));
 
         $self->frame->cube_brush({
             L => Wx::Brush->new(Wx::Colour->new($scene->left_rgb), wxBRUSHSTYLE_SOLID),
@@ -1626,7 +1742,7 @@ sub mouse_event_handler { #{{{1
             }
             else {
                 if (my $tile = $self->find_tile($grid_key)) {
-                    $log->debug("found tile " . Dumper($tile));
+#                    $log->debug("found tile " . Dumper($tile));
 
                     if ($action eq $IsoFrame::AC_ERASE_ALL
                         || $tile->{shape} =~ /T[LR]/
@@ -1663,7 +1779,7 @@ sub mouse_event_handler { #{{{1
                 $self->rebuild_render_group('select');
             }
             elsif (my $tile = $self->find_tile($grid_key)) {
-                $log->debug("tile: " . Dumper($tile));
+#                $log->debug("tile: " . Dumper($tile));
                 if ($action eq $IsoFrame::AC_SELECT_ALL
                     || $tile->{shape} =~ /T[LR]/
                     || ($action eq $IsoFrame::AC_SELECT && $tile->{shape} eq $paint_shape)
@@ -1834,7 +1950,7 @@ sub find_tile { #{{{1
                     $tile = undef;
                 }
 
-                $log->debug("found tile B at R_${left}_${top}_${right} " . Dumper($tile)) if $tile;
+#                $log->debug("found tile B at R_${left}_${top}_${right} " . Dumper($tile)) if $tile;
             }
             else {
                 $log->debug("found tile A at $grid_key");
@@ -1853,7 +1969,7 @@ sub find_tile { #{{{1
                 $tile = undef;
             }
 
-            $log->debug("found tile C at L_${left}_${top}_${right} " . Dumper($tile)) if $tile;
+#            $log->debug("found tile C at L_${left}_${top}_${right} " . Dumper($tile)) if $tile;
         }
     }
 
@@ -2026,10 +2142,10 @@ sub mark_area { #{{{1
 ################################################################################
 sub paint_tile { #{{{1
     my ($self, $left, $top, $right, $facing, $shape, $brush_index) = @_;
-    $log->debug("paint_tile @_");
+    my $debug_logging = $log->debug("paint_tile @_");
 
     # check all args are defined
-    $log->logconfess("bad paint : " . Dumper(\@_)) unless (scalar @_ == scalar grep { defined $_ } @_);
+#    $log->logconfess("bad paint : " . Dumper(\@_)) unless (scalar @_ == scalar grep { defined $_ } @_);
     $log->logconfess("bad shape $shape") unless $shape =~ /[LTR]/;
 
     # change the grid key according to the shape if we're in the wrong triangle;
@@ -2050,11 +2166,11 @@ sub paint_tile { #{{{1
     my $grid_key = "${facing}_${left}_${top}_${right}";
     if (my $tile = $self->grid->{$grid_key}) {
         if ($tile->{shape} eq $shape) {
-            $log->debug("duplicate tile, change colour TODO");
+            $log->debug("duplicate tile, change colour TODO") if $debug_logging;
 
             if (wxTheApp->config->repaint_same_tile) {
                 $tile->{brush_index} = defined $brush_index ? $brush_index : $self->brush_index;
-                $log->info("repaint_same_tile with $tile->{brush_index}");
+                $log->debug("repaint_same_tile with $tile->{brush_index}") if $debug_logging;
 
                 # if this tile wasn't part of new, make it so (and rebuild permanent)
                 $self->key_hash->{new}->{$grid_key} = 1;
@@ -2072,11 +2188,13 @@ sub paint_tile { #{{{1
     my $doing_shade_area = $action eq $IsoFrame::AC_SHADE_CUBE && $self->frame->area_mode;
     my $shifts = 0;
     $log->logconfess("no clashes for $shape") unless $Shape_clashes{$shape};
+    my $grid = $self->grid;
+    my $transient_grid = $self->transient_grid;
     for my $shift_point ( @{ $Shape_clashes{$shape} } ){
-        $log->debug("shift_point for $shape " . Dumper($shift_point));
+#        $log->debug("shift_point for $shape " . Dumper($shift_point)) if $debug_logging;
         my (undef, undef, undef, undef, $shift_flag, $clash_list ) = @{ $shift_point };
         for my $clash ( @{ $clash_list } ) {
-            $log->debug("clash " . Dumper($clash));
+#            $log->debug("clash " . Dumper($clash)) if $debug_logging;
             my ($left_clash_offset, $top_clash_offset, $right_clash_offset, $clash_shape) = @{ $clash };
 
             my $grid_key = $Shape_facing{$clash_shape}
@@ -2085,17 +2203,17 @@ sub paint_tile { #{{{1
                 . '_' . ($right + $right_clash_offset);
 
             my $tile;
-            if ($tile = $self->grid->{$grid_key}) {
-                $log->debug("found a clashing tile by key at $grid_key");
+            if ($tile = $grid->{$grid_key}) {
+                $log->debug("found a clashing tile by key at $grid_key") if $debug_logging;
                 if ($tile->{shape} eq $clash_shape) {
-                    $log->debug("clash tile matches shape $clash_shape, add shift_flag $shift_flag");
+                    $log->debug("clash tile matches shape $clash_shape, add shift_flag $shift_flag") if $debug_logging;
                     $shifts += $shift_flag;
                     last;
                 }
             }
 
             # if we're shading an area, we have to check for clashes in transient_grid as well
-            elsif ($doing_shade_area && ($tile = $self->transient_grid->{$grid_key})) {
+            elsif ($doing_shade_area && ($tile = $transient_grid->{$grid_key})) {
                 if ($tile->{shape} eq $clash_shape) {
                     $shifts += $shift_flag;
                     last;
@@ -2117,7 +2235,7 @@ sub paint_tile { #{{{1
         $facing = $Shape_facing{$shape};
     }
     elsif ($shifts == 3) {
-        $log->debug("clashes with existing cell(s)");
+        $log->debug("clashes with existing cell(s)") if $debug_logging;
         return 0;
     }
 
@@ -2132,14 +2250,14 @@ sub paint_tile { #{{{1
         'new' => 1,
     };
 
-    $log->debug("paint_tile $shape at $left, $top, $right, $facing");
+    $log->debug("paint_tile $shape at $left, $top, $right, $facing") if $debug_logging;
 
     # TODO I think this covers all cases when we should use transient_grid but check it
     if ($self->area_start || $action eq $IsoFrame::AC_PASTE) {
-        $self->transient_grid->{$grid_key} = $tile;
+        $transient_grid->{$grid_key} = $tile;
     }
     else {
-        $self->grid->{$grid_key} = $tile;
+        $grid->{$grid_key} = $tile;
         $self->key_hash->{new}->{$grid_key} = 1;
     }
 
@@ -2190,7 +2308,7 @@ sub shade_cube { #{{{1
 
     if ($tile) {
 
-        $log->debug("found a tile to shade_cube " . Dumper($tile));
+#        $log->debug("found a tile to shade_cube " . Dumper($tile));
 
         # if the tile is a triangle, we try to infer the shape by matching its colour
         # against the current colour.  If we can't, we do nothing.
@@ -2237,13 +2355,13 @@ sub shade_cube { #{{{1
 
             # find the shades for the other sides
             my @other_shades = $frame->find_shades($cube_side, $tile->{brush_index});
-            $log->debug("other_shades " . Dumper(\@other_shades));
+#            $log->debug("other_shades " . Dumper(\@other_shades));
 
             for my $other_side ( @{ $IsoFrame::OTHER_SIDES{ $cube_side } } ) {
 
                 # find the anchor for this side
                 my $offsets = $Cube_side_offset->{ $cube_side }->{ $other_side };
-                $log->debug("offsets " . Dumper($offsets));
+#                $log->debug("offsets " . Dumper($offsets));
 
                 # convert the shade into a brush index
                 my $new_rgb = shift @other_shades;
@@ -2437,7 +2555,7 @@ sub clipboard_operation { #{{{1
         my %brush_cache;
         for my $tile (@clipboard_tiles) {
 
-            $log->debug("palette at $tile->{brush_index} is " . Dumper($palette->[ $tile->{brush_index} ]));
+#            $log->debug("palette at $tile->{brush_index} is " . Dumper($palette->[ $tile->{brush_index} ]));
 
             # we're still using DC graphics to build the thumbnail; just make brushes as we go
             $brush_cache{ $tile->{brush_index} } ||= Wx::Brush->new( Wx::Colour->new( @{ $palette->[ $tile->{brush_index} ] } ), wxBRUSHSTYLE_SOLID );

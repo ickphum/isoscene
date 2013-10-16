@@ -96,14 +96,14 @@ sub new { # {{{1
 
             # the long timer has gone off, so we're ready to autosave. 
             # We restart the timer with the short period.
-            $log->info("long timer, wait for idle period");
+            $log->debug("long timer, wait for idle period");
             $self->autosave_timer->Start($self->config->autosave_idle_seconds * 1000, wxTIMER_ONE_SHOT);
         }
         else {
 
             # The short timer has gone off, meaning no mouse activity occurred in the 
             # period, we'll save and restart with the long interval again.
-            $log->info("short timer, save and reset to long");
+            $log->debug("short timer, save and reset to long");
             $self->scene->save; 
             $self->config->save; 
             $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
