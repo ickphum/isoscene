@@ -272,12 +272,12 @@ sub save { #{{{1
     my $bg_save = defined $config;
     $config ||= wxTheApp->config;
 
-#    if ($config->{use_binary_files}) {
+    if ($config->{use_binary_files}) {
         $self->save_binary;
-#    }
-#    else {
+    }
+    else {
         $self->save_yaml;
-#    }
+    }
 
     # we don't update the last filename for an autosave
     $self->remember_filename unless $bg_save;

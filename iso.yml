@@ -17,20 +17,20 @@ display_key: 0
 display_palette_index: 0
 previous_scene_files:
 - XeviousLogo
-- Walk
 - 0
 - Test
 - Xevious
-- House
-- New
 - Talisman
-- Santa
-- Start
 - Tycho
 - XeviousGL
 - Bridge
 - Castle
 - Kitchen
+- House
+- Santa
+- Start
+- New
+- Walk
 relative_shades: L,1,T,0,R,2
 repaint_same_tile: 0
 repeated_pasting: 0
