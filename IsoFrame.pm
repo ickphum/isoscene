@@ -187,7 +187,7 @@ sub new { #{{{1
     Wx::Event::EVT_MENU( $self, wxID_OPEN, \&open_from_file );
     Wx::Event::EVT_MENU( $self, wxID_UNDO, sub { my $self = shift; $self->canvas->undo_or_redo(0); } );
     Wx::Event::EVT_MENU( $self, $ID_REDO, sub { my $self = shift; $self->canvas->undo_or_redo(1); } );
-    Wx::Event::EVT_MENU( $self, wxID_EXIT, sub { $log->debug("quit"); $self->Destroy; } );
+    Wx::Event::EVT_MENU( $self, wxID_EXIT, sub { $log->debug("quit"); $self->Close; } );
 
     $self->SetSizer(my $sizer = Wx::BoxSizer->new(wxHORIZONTAL));
 
@@ -328,6 +328,7 @@ sub new { #{{{1
                 autosave_on_exit
                 autosave_period_seconds 
                 autosave_idle_seconds 
+                use_binary_files
                 use_compressed_files
                 undo_wait_milliseconds
                 undo_repeat_milliseconds
@@ -353,7 +354,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit use_compressed_files repeated_pasting repaint_same_tile automatic_branching display_palette_index display_color display_key)) {
+            for my $option (qw(autosave_on_exit use_binary_files use_compressed_files repeated_pasting repaint_same_tile automatic_branching display_palette_index display_color display_key)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -447,6 +448,23 @@ sub new { #{{{1
 
     $log->debug("frame $self");
 
+    Wx::Event::EVT_CLOSE($self, sub {
+        my ($self, $event) = @_;
+
+        my $app = wxTheApp;
+
+        $app->autosave_timer->Stop;
+
+        # do the closing save before the windows close
+        if ($app->config->autosave_on_exit) {
+            my $busy = new Wx::BusyCursor;
+            $app->scene->save;
+            $app->config->save;
+        }
+
+        $event->Skip;
+    });
+
     # $self->Maximize(1);
 
     return $self;
@@ -537,10 +555,6 @@ sub do_menu_choice { #{{{1
     my $app = wxTheApp;
 
     if ($string eq $MI_SAVE) {
-
-        # Autosave makes this fairly pointless, unless you're paranoid. Make it
-        # useful by also emptying the new hash, thus speeding up work.
-        $self->canvas->make_new_permanent;
         $self->save_to_file;
     }
     elsif ($string eq $MI_OPEN) {
@@ -550,7 +564,7 @@ sub do_menu_choice { #{{{1
         $app->scene->save;
         $app->scene( IsoScene->new() );
         $self->canvas->scene($app->scene);
-        $self->canvas->set_undo_redo_button_states;
+        $self->canvas->calculate_grid_points;
         $app->set_frame_title;
         $self->Refresh;
     }
@@ -643,7 +657,7 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|use_compressed_files|repeated_pasting|repaint_same_tile|automatic_branching|display_palette_index|display_color|display_key/) {
+        if ($option =~ /autosave_on_exit|use_binary_files|use_compressed_files|repeated_pasting|repaint_same_tile|automatic_branching|display_palette_index|display_color|display_key/) {
             $app->config->$option($app->config->$option ? 0 : 1);
             $log->info("config setting for $option is now " . $app->config->$option);
         }
@@ -651,8 +665,7 @@ sub do_menu_choice { #{{{1
             $app->config->$option($value);
         }
         if ($option =~ /display/) {
-            $self->canvas->rebuild_render_group('permanent');
-            $self->canvas->rebuild_render_group('new');
+            $self->canvas->force_rebuild_everywhere;
         }
         $self->canvas->Refresh;
     }
@@ -1375,7 +1388,7 @@ sub do_undo_redo_tool { #{{{1
     elsif ($button_name =~ /(?:undo|redo)_many/) {
 
         $frame->canvas->undo_or_redo($button_name eq 'redo_many', 1, 1);
-        $frame->canvas->rebuild_and_refresh(1,1);
+        $frame->canvas->rebuild_and_refresh;
     }
     elsif ($button_name eq 'undo_to_branch') {
         if (@{ $frame->canvas->scene->undo_stack }) {
@@ -1383,7 +1396,7 @@ sub do_undo_redo_tool { #{{{1
                 last unless $frame->canvas->undo_or_redo(0,1);
                 last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
             }
-            $frame->canvas->rebuild_and_refresh(1,1);
+            $frame->canvas->rebuild_and_refresh;
         }
         else {
             $frame->display_message("There are no actions to undo.");
@@ -1395,7 +1408,7 @@ sub do_undo_redo_tool { #{{{1
                 last unless $frame->canvas->undo_or_redo(1,1);
                 last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
             }
-            $frame->canvas->rebuild_and_refresh(1,1);
+            $frame->canvas->rebuild_and_refresh;
         }
         else {
             $frame->display_message("There are no actions to redo.");
@@ -1555,82 +1568,85 @@ sub set_action_mode { #{{{1
 sub show_paste_list { #{{{1
     my ($self) = @_;
 
-        # display the popup window
-        $log->debug("create paste list popup");
-        my $popup = Wx::PlPopupTransientWindow->new($self);
+    # display the popup window
+    $log->debug("create paste list popup");
+    my $popup = Wx::PlPopupTransientWindow->new($self);
 
-        $popup->SetSizer(my $sizer = Wx::BoxSizer->new(wxHORIZONTAL));
+    $popup->SetSizer(my $sizer = Wx::BoxSizer->new(wxHORIZONTAL));
 
-        # the image list holds all the potential items in the list, it doesn't actually
-        # insert any items.
-        my $images= Wx::ImageList->new( 64, 64, 1 );
+    # the image list holds all the potential items in the list, it doesn't actually
+    # insert any items.
+    my $images= Wx::ImageList->new( 64, 64, 1 );
 
-        # initialise with -1 for the paste-selector dialog
-        my @clipboard_indexes = (-1);
-        $images->Add( Wx::Bitmap->new("images/paste_selector.png", wxBITMAP_TYPE_ANY));
+    # initialise with -1 for the paste-selector dialog
+    my @clipboard_indexes = (-1);
+    $images->Add( Wx::Bitmap->new("images/paste_selector.png", wxBITMAP_TYPE_ANY));
 
-        for my $i (0 .. $#{ $self->canvas->scene->clipboard }) {
-            my $item = $self->canvas->scene->clipboard->[$i];
-            next unless $item->{name};
-            my $thumb_file = "clipboard/$item->{name}.png";
-            if (-f $thumb_file) {
-                $images->Add( Wx::Bitmap->new($thumb_file, wxBITMAP_TYPE_ANY));
-                push @clipboard_indexes, $i;
+    for my $i (0 .. $#{ $self->canvas->scene->clipboard }) {
+        my $item = $self->canvas->scene->clipboard->[$i];
+        next unless $item->{name};
+        my $thumb_file = "clipboard/$item->{name}.png";
+        if (-f $thumb_file) {
+            $images->Add( Wx::Bitmap->new($thumb_file, wxBITMAP_TYPE_ANY));
+            push @clipboard_indexes, $i;
+        }
+    }
+
+    my $list = Wx::ListCtrl->new( $popup, -1, wxDefaultPosition, [ $self->GetSize->GetWidth - 10, -1 ],  wxLC_ICON | 0 );
+    Wx::Event::EVT_LIST_ITEM_ACTIVATED($popup, $list, sub {
+        my ($parent, $event) = @_;
+        $log->debug(sprintf "activated list pos %d, clipboard index %d ", $event->GetIndex, $event->GetItem->GetData);
+
+        $popup->Hide;
+        $popup->Close;
+
+        if ($event->GetIndex) {
+            $self->canvas->clipboard_operation('paste', $event->GetItem->GetData);
+        }
+        else {
+            $log->debug("load paste selector");
+            my $dialog = IsoPasteSelector->new($self);
+            # my $dialog = wxTheApp->xrc->LoadDialog($self, 'paste_selector');
+            $log->debug("show paste selector");
+            if ($dialog->ShowModal == wxID_OK) {
+                $log->debug("chose a file");
+
+                # we've added the clipboard item to the canvas in the dialog,
+                # so all we need do here is trigger a standard paste op.
+                $self->canvas->clipboard_operation('paste');
             }
+            $log->debug("shown paste selector");
+            $dialog->Destroy;
         }
 
-        my $list = Wx::ListCtrl->new( $popup, -1, wxDefaultPosition, [ $self->GetSize->GetWidth - 10, -1 ],  wxLC_ICON | 0 );
-        Wx::Event::EVT_LIST_ITEM_ACTIVATED($popup, $list, sub {
-            my ($parent, $event) = @_;
-            $log->debug(sprintf "activated list pos %d, clipboard index %d ", $event->GetIndex, $event->GetItem->GetData);
+        $event->Skip;
 
-            $popup->Hide;
-            $popup->Close;
+        $log->debug("done in EVT_LIST_ITEM_ACTIVATED");
 
-            if ($event->GetIndex) {
-                $self->canvas->clipboard_operation('paste', $event->GetItem->GetData);
-            }
-            else {
-                $log->debug("load paste selector");
-                my $dialog = IsoPasteSelector->new($self);
-                # my $dialog = wxTheApp->xrc->LoadDialog($self, 'paste_selector');
-                $log->debug("show paste selector");
-                if ($dialog->ShowModal == wxID_OK) {
-                    $log->debug("chose a file");
+        return;
+    });
 
-                    # we've added the clipboard item to the canvas in the dialog,
-                    # so all we need do here is trigger a standard paste op.
-                    $self->canvas->clipboard_operation('paste');
-                }
-                $log->debug("shown paste selector");
-                $dialog->Destroy;
-            }
+    $list->AssignImageList($images, wxIMAGE_LIST_NORMAL);
 
-            $event->Skip;
+    # add all the images to the display
+    for my $i (0 .. $images->GetImageCount - 1) {
+        $list->InsertImageItem($i, $i);
+        $list->SetItemData($i, $clipboard_indexes[$i]);
+    }
 
-            $log->debug("done in EVT_LIST_ITEM_ACTIVATED");
+    $sizer->Add($list, 1, wxEXPAND, 3 );
+    $popup->SetSize(min($self->GetSize->GetWidth, $images->GetImageCount * 85),100);
 
-            return;
-        });
+    my $button = $self->clipboard_btn->{paste};
+    my $position = $button->GetScreenPosition();
+    $popup->Move($position->x + 52, $position->y);
 
-        $list->AssignImageList($images, wxIMAGE_LIST_NORMAL);
+    $popup->Popup;
 
-        # add all the images to the display
-        for my $i (0 .. $images->GetImageCount - 1) {
-            $list->InsertImageItem($i, $i);
-            $list->SetItemData($i, $clipboard_indexes[$i]);
-        }
-
-        $sizer->Add($list, 1, wxEXPAND, 3 );
-        $popup->SetSize(min($self->GetSize->GetWidth, $images->GetImageCount * 85),100);
-
-        my $button = $self->clipboard_btn->{paste};
-        my $position = $button->GetScreenPosition();
-        $popup->Move($position->x + 52, $position->y);
-
-        $popup->Popup;
+    return;
 }
 
+#################################################################################
 1;
 
 # todo...

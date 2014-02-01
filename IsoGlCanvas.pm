@@ -44,9 +44,11 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
 
     paste_list
 
-    grid transient_grid key_hash visible_is_new
+    grid transient_grid key_hash
 
     render_group texture_id init
+
+    sector all_sectors visible_sectors
     ));
 
 # globals {{{1
@@ -235,7 +237,7 @@ sub new { #{{{1
     $self->frame("$parent" =~ /ScrolledWindow/ ? $parent->GetParent : $parent);
 
     $self->render_group({});
-    for my $group (qw(permanent new transient select)) {
+    for my $group (qw(transient select)) {
         $self->init_render_group($group);
     }
 
@@ -354,10 +356,10 @@ sub InitGL { # {{{1
         my $texture_path = "images/$texture_name.tga";
         $log->logdie("no texture at $texture_path")
             unless -f $texture_path;
-        $log->info("load texture from $texture_path");
+        $log->debug("load texture from $texture_path");
         my $img = new OpenGL::Image( source => $texture_path);
         my @image_info = $img->Get(qw(gl_internalformat width height gl_format gl_type));
-        $log->info("image_info $texture_name @image_info");
+        $log->debug("image_info $texture_name @image_info");
         my $Tex_Pixels = $img->GetArray();
 
         glBindTexture(GL_TEXTURE_2D, $texture_ids[$index]);
@@ -497,6 +499,8 @@ sub calculate_grid_points { #{{{1
     my $scale = $scene->scale;
     my $origin_x = $scene->origin_x;
     my $origin_y = $scene->origin_y;
+    my $x_grid_size = $self->x_grid_size;
+    my $y_grid_size = $self->y_grid_size;
 
     my $logical_width = $width * $scale;
     my $logical_height = $height * $scale;
@@ -519,31 +523,33 @@ sub calculate_grid_points { #{{{1
         $corners[$i]->[0]--;
         $corners[$i]->[2]--;
     }
-    $log->info("corners: " . Dumper(\@corners));
+#    $log->info("corners: " . Dumper(\@corners));
+
+    # find the sectors for each corner
+    my $sector_size = $scene->sector_size;
+    my @sectors = map { [ floor($_->[0]/$sector_size), floor($_->[1]/$sector_size) ] } @corners;
+#    $log->info("sectors: " . Dumper(\@sectors));
 
     # We're using sectors based on R shaped tiles (arbitrarily chosen over L; T would have been less
     # useful since they have no sides parallel with the window sides). This means that L and T tiles
     # on the bottom and right edges respectively may extend past the edges of the sector as made up
     # of R tiles. What this means in practice is that sectors that are just above or to the left of
     # the visible area (and technically out of view) may need to be rendered as well in case such tiles exist.
-    # We'll accomplish this by moving the corners on the left edge outward (ie down and left for the
-    # bottom corner, up and left for the top corner) so that we'll include any sectors in this
-    # DANGER ZONE. We don't care about the corners on the right edge; we actually don't use the L and R
-    # coords from those corners at all, we just need the T coord of the top-right sector to terminate
-    # the loop which builds the sector list.
+    # We are vulnerable to this problem when the left edge of the sector is just out of view; when this is the case,
+    # we add the next column to the left as well, as well as the sector above the top corner.
+    my @visible_sectors = ();
+    if (($logical_origin_x - $sectors[0]->[1] * $sector_size * $x_grid_size) < $x_grid_size) {
 
-    # move bottom left corner down and left
-    $corners[0]->[1]--;
-    $corners[0]->[2]--;
+        $log->debug("add extra sectors for edge coverage");
 
-    # move top left corner up and left
-    $corners[0]->[0]++;
-    $corners[0]->[1]--;
+        # add column to left of sector edge
+        for my $left ($sectors[0]->[0] .. $sectors[1]->[0] + 1) {
+            push @visible_sectors, $left . '_' . ($sectors[0]->[1] - 1);
+        }
 
-    # find the sectors for each corner
-    my $sector_size = 3;
-    my @sectors = map { [ floor($_->[0]/$sector_size), floor($_->[1]/$sector_size) ] } @corners;
-    $log->info("sectors: " . Dumper(\@sectors));
+        # add sector above top corner
+        push @visible_sectors, ($sectors[1]->[0] + 1) . '_' . $sectors[1]->[1];
+    }
 
     # finding the vertical sector list along each edge is easy, we just fill in the gap between the
     # respective corner pairs. finding the top and bottom edges is not so easy, since the required sectors
@@ -580,9 +586,9 @@ sub calculate_grid_points { #{{{1
         : $top_edge < $top_ref_line
             ? 0
             : -1;
-    $log->info(sprintf("logical_origin_y %d, logical_height %d, top corner %d, bottom_ref_line %d, top ref line %d",
+    $log->debug(sprintf("logical_origin_y %d, logical_height %d, top corner %d, bottom_ref_line %d, top ref line %d",
         $logical_origin_y, $logical_height, $logical_origin_y + $logical_height, $bottom_ref_line, $top_ref_line));
-    $log->info("bottom_stage $bottom_stage, top_stage $top_stage");
+    $log->debug("bottom_stage $bottom_stage, top_stage $top_stage");
 
     # we'll move across the grid, adding all sectors between top and bottom for each 
     # column of sectors. We adjust the top and bottom coords using the stage fields.
@@ -593,8 +599,11 @@ sub calculate_grid_points { #{{{1
 
         # $sector_row is actually the left coord of the sector
         for my $sector_row ($sector_bottom .. $sector_top) {
-            push @sectors, [ $sector_row, $sector_column ];
-#            $log->info("add [ $sector_row, $sector_column ]");
+            my $sector_key = $sector_row . '_' . $sector_column;
+
+            # don't bother rendering empty sectors
+#            push @visible_sectors, $sector_key if $self->sector->{$sector_key};
+            push @visible_sectors, $sector_key;
         }
 
         $bottom_stage++;
@@ -610,13 +619,12 @@ sub calculate_grid_points { #{{{1
         }
 
     }
+    $self->visible_sectors(\@visible_sectors);
+    $log->debug("visible_sectors @visible_sectors");
 
     $self->init_render_group('grid');
 
     my @grid_points = ();
-
-    my $x_grid_size = $self->x_grid_size;
-    my $y_grid_size = $self->y_grid_size;
 
     my $min_x_grid = floor($logical_origin_x / ($x_grid_size * 2));
     my $max_x_grid = ceil(($logical_origin_x + $logical_width) / ($x_grid_size * 2));
@@ -684,9 +692,6 @@ sub calculate_grid_points { #{{{1
 
     $self->make_render_group_array_objects('grid');
 
-    # whenever we change the grid area, we clear this flag
-    $self->visible_is_new(0);
-
     return;
 }
 
@@ -748,7 +753,9 @@ sub init_render_group { #{{{1
 
 ################################################################################
 # Take the raw data added to a render group's lists and build the OpenGL::Array
-# objects required for rendering.
+# objects required for rendering. Each sector has an associated render group, named
+# with the sector key; this was easiest since we still needed some render_groups (grid, select)
+# despite the switch to sectors.
 sub make_render_group_array_objects { #{{{1
     my ($self, $group_id) = @_;
 
@@ -809,7 +816,7 @@ sub display_render_group { # {{{1
 
     my $render_group = $self->render_group->{$real_group_id};
     unless ($render_group) {
-        $log->info("render_group $real_group_id doesn't exist");
+        $log->debug("render_group $real_group_id doesn't exist");
         return;
     }
 
@@ -852,41 +859,6 @@ sub Render { # {{{1
     $self->SetCurrent( $self->GetContext );
     $self->InitGL unless $self->init;
 
-#    my $spacing = 10;
-#    $self->init_render_group('permanent');
-#    $self->init_render_group('text');
-#    for my $triangle (@Triangles) {
-#        my ($col, $row) = @{ $triangle };
-#
-#        # no texture data required here, this array is drawn without texture data
-#
-#        $self->add_render_group_data('permanent', 'vertex',
-#            $col * $spacing, $row * $spacing,
-#            $col * $spacing + $spacing / 2, $row * $spacing,
-#            $col * $spacing, $row * $spacing + $spacing / 2);
-#
-#        $self->add_render_group_data('permanent', 'color',
-#            $col * 30, $row * 30, 0,
-#            $col * 30, $row * 30, 0,
-#            $col * 30, $row * 30, 0);
-#
-##        $self->render_text_string('permanent', "$col,$row", [ $col * $spacing, $row * $spacing ]);
-#
-#    }
-#
-#    $self->make_render_group_array_objects('permanent');
-#
-#    for my $left (-5 .. 5) {
-#        for my $top (-5 .. 5) {
-#            my $x = $top * $self->x_grid_size;
-#            my $y = ($left + $top / 2) * $self->y_grid_size;
-#            my $right = $left + $top;
-#            $self->render_text_string('permanent', "$left,$top,$right", [ $x,$y ]);
-#        }
-#    }
-#
-#    $self->make_render_group_array_objects('text');
-
     my ($canvas_width, $canvas_height) = $self->GetSizeWH;
     my $render_to_image;
 
@@ -895,7 +867,7 @@ sub Render { # {{{1
         glViewport( 0, 0, $width, $height );
         $render_to_image = 1;
 
-        $log->info(sprintf("render to image; origin %.1f,%.1f, output dim $width x $height, scale %.2f, logical dim %.1f x %.1f", 
+        $log->debug(sprintf("render to image; origin %.1f,%.1f, output dim $width x $height, scale %.2f, logical dim %.1f x %.1f", 
             $self->scene->origin_x,$self->scene->origin_y,
             $self->scene->scale, 
             $width * $self->scene->scale, 
@@ -905,6 +877,8 @@ sub Render { # {{{1
     else {
         ($width, $height) = ($canvas_width, $canvas_height);
     }
+
+#    $log->info("Render: render_to_image " . ($render_to_image || 0));
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -918,9 +892,9 @@ sub Render { # {{{1
 
     # Rendering passes & arrays:
     # Grid - vertex (may come before tiles)
-    # Tiles; Permanent New Transient
+    # Tiles; Sectors Transient
     # Select markers
-    # Text; Permanent New Transient
+    # Text; Sectors Transient
     # Target
 
     glClearColor(@{ $self->background_color }, 0);
@@ -934,15 +908,35 @@ sub Render { # {{{1
         $self->display_render_group('grid');
     }
 
-    for my $group (qw(permanent new transient)) {
+    # render everything if we're exporting, otherwise visible only
+    my @sector_keys = $render_to_image
+        ? keys %{ $self->sector }
+        : @{ $self->visible_sectors };
+
+    for my $sector_key (@sector_keys) {
+        next unless my $sector = $self->sector->{$sector_key};
+        if ($sector->{dirty}) {
+            $log->debug("rebuild sector $sector_key");
+            $self->rebuild_render_group($sector_key);
+            $self->make_render_group_array_objects($sector_key);
+            $sector->{dirty} = 0;
+        }
+#        $log->info("display sector $sector_key");
+        $self->display_render_group($sector_key);
+    }
+
+    for my $group (qw(transient select)) {
         $self->display_render_group($group);
     }
 
-    $self->display_render_group('select');
+    my $config = wxTheApp->config;
+    if ($config->display_palette_index || $config->display_color || $config->display_key) {
 
-    # render text after select so markers don't cover text
-    for my $group (qw(permanent new transient)) {
-        $self->display_render_group("${group}_text");
+        # we've rebuilt the sectors above, including the text array, so we
+        # can now just treat the sector keys as render group ids.
+        for my $group ((map { "${_}_text" } @{ $self->visible_sectors }), "transient_text") {
+            $self->display_render_group($group);
+        }
     }
 
     # draw the current target
@@ -987,7 +981,7 @@ sub Render { # {{{1
 sub rebuild_render_group { #{{{1
     my ($self, $group_id) = @_;
 
-    my $info_logging = $log->info("rebuild_render_group $group_id from " . (caller)[2]);
+    my $logging = $log->debug("rebuild_render_group $group_id from " . (caller)[2]);
 
     my $config = wxTheApp->config;
 
@@ -996,19 +990,6 @@ sub rebuild_render_group { #{{{1
     my $palette = $self->palette;
 
     my %group_source = (
-        permanent => [
-            {
-                data => $self->grid,
-                exclude => $self->key_hash->{new},
-            },
-        ],
-        new => [
-            {
-                data => $self->grid,
-                include => $self->key_hash->{new},
-                exclude => $self->key_hash->{erase},
-            },
-        ],
         transient => [
             {
                 data => $self->transient_grid,
@@ -1020,12 +1001,27 @@ sub rebuild_render_group { #{{{1
                 include => $self->key_hash->{select},
                 exclude => $self->key_hash->{erase},
             },
-
         ],
     );
 
-    my $sources = $group_source{$group_id}
-        or $log->logdie("no sources for group $group_id");
+    my $sources = $group_source{$group_id};
+    unless ($sources) {
+
+        # must be a sector key
+        $log->debug("no sources for $group_id, try sector");
+        if (my $sector = $self->sector->{$group_id}) {
+            $sources = [
+                {
+                    data => $self->grid,
+                    include => $sector->{tile},
+                    exclude => $self->key_hash->{erase},
+                },
+            ],
+        }
+        else {
+            $log->logdie("no sources for group $group_id");
+        }
+    }
 
     # while we're doing area select/deselect, keys in transient are also relevant,
     # but how so depends on select_toggle.
@@ -1170,13 +1166,23 @@ sub preserve_transient_grid { #{{{1
 
 #    $log->debug("preserve_transient_grid from " . (caller)[2] . ", data " . Dumper($self->transient_grid));
 
-    # copy tiles from transient_grid to scene and add keys to new
+    # copy tiles from transient_grid to scene
     my ($grid, $transient_grid) = ($self->grid, $self->transient_grid);
     my @transient_keys = keys %{ $transient_grid };
+
+    unless (@transient_keys) {
+        $log->info("no tiles in transient grid, nothing to preserve");
+        return;
+    }
+
+    my $sector = $self->sector;
     for my $key (@transient_keys) {
-        $log->debug("copy transient $key to new");
-        $grid->{ $key } = $transient_grid->{ $key };
-        $self->key_hash->{new}->{$key} = 1;
+        my $tile = $grid->{ $key } = $transient_grid->{ $key };
+
+        # add to sector and mark the sector as dirty; the tiles already know what sector they're in (it's
+        # set when they're created), but they're not part of the sector's list until now.
+        $sector->{ $tile->{sector} }->{tile}->{ $key } = 1;
+        $sector->{ $tile->{sector} }->{dirty} = 1;
     }
 
     # since all the undo information needs is keys, we can get them from the transient grid.
@@ -1186,40 +1192,7 @@ sub preserve_transient_grid { #{{{1
 
     # clear transient grid
     $self->transient_grid({});
-
-    $self->rebuild_render_group('new');
     $self->rebuild_render_group('transient');
-
-    return;
-}
-
-################################################################################
-# make all new tiles permanent, so we speed up any new painting from now on.
-sub make_new_permanent { #{{{1
-    my ($self) = @_;
-
-    # all we have to do is empty the new key hash and rebuild
-    $self->key_hash->{new} = {};
-    $self->rebuild_render_group('new');
-    $self->rebuild_render_group('permanent');
-
-    return;
-}
-
-################################################################################
-# mark all visible tiles as new, so we can render them separately.
-sub make_visible_new { #{{{1
-    my ($self) = @_;
-
-    # we only need to do this once per visible region; this flag goes false 
-    # whenever we zoom or scroll.
-    $self->visible_is_new(1);
-
-    $self->mark_visible_tiles;
-
-    for my $key (keys %{ $self->key_hash->{visible} }) {
-        $self->key_hash->{new}->{$key} = 1;
-    }
 
     return;
 }
@@ -1345,6 +1318,29 @@ sub scene { #{{{1
         # necessary every time we want the grid.
         $self->grid($scene->grid);
 
+        # delete existing sectors and associated render groups
+        map { delete $self->render_group->{$_}; delete $self->render_group->{"${_}_text"}; } keys %{ $self->sector } if $self->sector;
+        $self->visible_sectors([]);
+        my $sector = $self->sector({});
+
+        # We're not saving the sector's tile lists (and will drop the tile's sector key with the new file format)
+        # so go through all the tiles to set up the sectors.
+
+        for my $tile (values %{ $self->grid }) {
+
+            $tile->{key} = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+
+            # find_sector_key lives in IsoScene because it needs the sector size
+            my $tile_sector = $scene->find_sector_key($tile);
+            $self->create_sector($tile_sector) unless $sector->{ $tile_sector };
+
+            # record this tile in this sector and v.v.
+            $sector->{ $tile_sector }->{tile}->{ $tile->{key} } = 1;
+            $tile->{sector} = $tile_sector;
+        }
+        $self->all_sectors([ sort keys %{ $sector} ]);
+#        $log->debug("all_sectors " . join(',', @{ $self->all_sectors }));
+
         $self->palette([]);
         $self->palette_index({});
         for my $i ( 0 .. $#{ $scene->palette } ) {
@@ -1366,7 +1362,7 @@ sub scene { #{{{1
         });
 
         # clear the key hashes
-        for my $hash (qw(new select transient erase)) {
+        for my $hash (qw(select transient erase)) {
             $self->key_hash->{$hash} = {};
         }
 
@@ -1374,14 +1370,11 @@ sub scene { #{{{1
 
             # initialise the select hash with selected tiles
             $self->key_hash->{select}->{$key} = 1 if $scene->grid->{$key}->{selected};
-
-            # clear the new key
-            delete $scene->grid->{$key}->{new};
         }
 
         $self->area_tiles([]);
 
-        for my $array (qw(permanent new transient select)) {
+        for my $array (qw(select)) {
             $self->rebuild_render_group($array);
         }
 
@@ -1390,6 +1383,24 @@ sub scene { #{{{1
     }
 
     return $self->_scene;
+}
+
+################################################################################
+sub create_sector {
+    my ($self, $sector) = @_;
+
+    $log->logdie("sector $sector already exists") if $self->sector->{$sector};
+
+    # create the sector
+    $self->sector->{ $sector } = {
+        tile => {},
+        dirty => 1,
+    };
+
+    # init the associated render group
+    $self->init_render_group($sector);
+
+    return $self->sector->{$sector};
 }
 
 ################################################################################
@@ -1543,13 +1554,7 @@ sub mouse_event_handler { #{{{1
             }
             elsif ($action =~ /erase/ && $area_mode) {
 
-                # we're starting an area erase; add all visible tiles to new so we only have to refresh that array on every move,
-                # not permanent as well.
-                unless ($self->visible_is_new) {
-                    $self->make_visible_new;
-                    $self->rebuild_render_group('permanent');
-                    $self->rebuild_render_group('new');
-                }
+                # we're starting an area erase
             }
             elsif ($action =~ /select/) {
                 $log->debug("lmb down select");
@@ -1594,7 +1599,6 @@ sub mouse_event_handler { #{{{1
                 $self->import_bitmap($side);
                 $frame->action($frame->previous_action);
                 $self->set_cursor;
-                $self->rebuild_render_group('new');
                 $frame->Refresh;
             }
 
@@ -1628,17 +1632,13 @@ sub mouse_event_handler { #{{{1
                 }
                 elsif ($action =~ /erase/) {
 
-                    # the erase key hash holds the tiles to be deleted, which are all now marked
-                    # as new and rendered as such.
+                    # the erase key hash holds the tiles to be deleted
                     my $deleted_keys = [ keys %{ $self->key_hash->{erase} } ];
                     $self->add_undo_action($IsoFrame::AC_ERASE, $deleted_keys);
 
-                    # we don't care about the return flags from remove_tiles, we know we're
-                    # rebuilding new.
                     $self->remove_tiles($deleted_keys);
                     $refresh = 1;
                     $self->key_hash->{erase} = {};
-                    $self->rebuild_render_group('new');
                     $self->rebuild_render_group('select');
                 }
                 elsif ($action =~ /select/) {
@@ -1722,7 +1722,6 @@ sub mouse_event_handler { #{{{1
 
                 # let paint_tile do all the transforms and clash checking
                 if (my $grid_key = $self->paint_tile($left, $top, $right, $facing, $paint_shape)) {
-                    $self->rebuild_render_group('new');
                     $self->add_undo_action($IsoFrame::AC_PAINT, $self->grid->{$grid_key});
                     $refresh = 1;
                 }
@@ -1734,10 +1733,8 @@ sub mouse_event_handler { #{{{1
                 # clear tiles from previous area clear location
                 $self->key_hash->{erase} = {};
 
-                # we shifted all visible tiles from permanent to new when we started, so now we
-                # just display new - erased.
+                # add the keys to the erase hash and mark the touched sectors for rebuild
                 $refresh = $self->mark_area($self->key_hash->{erase}, $left, $top, $right, $facing, $paint_shape);
-                $self->rebuild_render_group('new');
                 $self->rebuild_render_group('select');
             }
             else {
@@ -1752,17 +1749,13 @@ sub mouse_event_handler { #{{{1
 
                         # the tile we delete will not have the same grid_key that we 
                         # passed in if we clicked in the "wrong" half.
-                        $grid_key = join('_', @{ $tile }{qw( facing left top right )});
 
-                        $self->add_undo_action($IsoFrame::AC_ERASE, $self->grid->{$grid_key});
-                        delete $self->grid->{$grid_key};
+                        $self->add_undo_action($IsoFrame::AC_ERASE, $self->grid->{$tile->{key}});
+                        delete $self->grid->{ $tile->{key} };
+                        delete $self->sector->{ $tile->{sector} }->{tile}->{ $tile->{key} };
+                        $self->sector->{ $tile->{sector} }->{dirty} = 1;
 
-                        # no point in checking if it exists in new or select, just try to delete it and record if it was there
-                        my $was_new = delete $self->key_hash->{new}->{$grid_key};
                         my $was_selected = delete $self->key_hash->{select}->{$grid_key};
-
-                        # if we delete a single permanent tile, we can't prevent refreshing permanent
-                        $self->rebuild_render_group($was_new ? 'new' : 'permanent');
                         $self->rebuild_render_group('select') if $was_selected;
                         $refresh = 1;
                     }
@@ -1787,13 +1780,11 @@ sub mouse_event_handler { #{{{1
                 {
                     $tile->{selected} = $self->select_toggle;
 
-                    # find the real grid key
-                    $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                     if ($self->select_toggle) {
-                        $self->key_hash->{select}->{$grid_key} = 1;
+                        $self->key_hash->{select}->{$tile->{key}} = 1;
                     }
                     else {
-                        delete $self->key_hash->{select}->{$grid_key};
+                        delete $self->key_hash->{select}->{$tile->{key}};
                     }
                     $self->rebuild_render_group('select');
                     $refresh = 1;
@@ -1819,9 +1810,7 @@ sub mouse_event_handler { #{{{1
             }
             else {
 
-                if ($refresh = $self->shade_cube($left, $top, $right, $facing, $paint_shape) ) {
-                    $self->rebuild_render_group('new');
-                }
+                $refresh = $self->shade_cube($left, $top, $right, $facing, $paint_shape);
             }
         }
         elsif ($action eq $IsoFrame::AC_PASTE) {
@@ -1848,7 +1837,7 @@ sub mouse_event_handler { #{{{1
         my $scale_factor;
         if ($event_flags & $ME_WHEEL_BACK) {
 
-            $scale_factor = 2 if $scale < 16;
+            $scale_factor = 2 if $scale < 32;
             $log->debug("wheel back, scale_factor " . ($scale_factor || 'undef'));
         }
         else {
@@ -2023,6 +2012,7 @@ sub mark_area { #{{{1
     my $triangle_shift = $shape_triangle_shift->{ $shape }->{ $facing };
 
     my $action = $self->frame->action;
+    my $sector = $self->sector;
 
     wxTheApp->set_frame_title(($maxes[0] - $mins[0] + 1) . "x" . ($maxes[1] - $mins[1] + 1));
 
@@ -2061,6 +2051,9 @@ sub mark_area { #{{{1
                         # due to facing; mark the key of the tile we found.
                         $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                         $marked_hash->{$grid_key} = 1;
+
+                        # when we're erasing, we need to rebuild the sector
+                        $sector->{ $tile->{sector} }->{dirty} = 1 if $action =~ /erase/;
                     }
                 }
 
@@ -2078,10 +2071,12 @@ sub mark_area { #{{{1
                             $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                             $log->debug("triangle key $grid_key found $tile->{shape}");
                             $marked_hash->{$grid_key} = 1;
+                            $sector->{ $tile->{sector} }->{dirty} = 1 if $action =~ /erase/;
                         }
                     }
 
                 }
+
             }
         }
     }
@@ -2171,9 +2166,7 @@ sub paint_tile { #{{{1
             if (wxTheApp->config->repaint_same_tile) {
                 $tile->{brush_index} = defined $brush_index ? $brush_index : $self->brush_index;
                 $log->debug("repaint_same_tile with $tile->{brush_index}") if $debug_logging;
-
-                # if this tile wasn't part of new, make it so (and rebuild permanent)
-                $self->key_hash->{new}->{$grid_key} = 1;
+                $self->sector->{ $tile->{sector} }->{dirty} = 1;
                 return $grid_key;
             }
             else {
@@ -2247,8 +2240,13 @@ sub paint_tile { #{{{1
         top => $top,
         right => $right,
         facing => $facing,
-        'new' => 1,
+        key => $grid_key,
     };
+
+    # can only do this with a completed tile
+    $tile->{sector} = $self->scene->find_sector_key($tile);
+    my $sector = $self->sector;
+    $self->create_sector($tile->{sector}) unless $self->sector->{ $tile->{sector} };
 
     $log->debug("paint_tile $shape at $left, $top, $right, $facing") if $debug_logging;
 
@@ -2258,7 +2256,8 @@ sub paint_tile { #{{{1
     }
     else {
         $grid->{$grid_key} = $tile;
-        $self->key_hash->{new}->{$grid_key} = 1;
+        $sector->{ $tile->{sector} }->{tile}->{ $grid_key } = 1;
+        $sector->{ $tile->{sector} }->{dirty} = 1;
     }
 
     return $grid_key;
@@ -2473,9 +2472,7 @@ sub clipboard_operation { #{{{1
             # must record undo before we remove
             $self->add_undo_action($IsoFrame::AC_ERASE, $grid_keys);
 
-            my ($refresh_permanent,$refresh_new) = $self->remove_tiles($grid_keys);
-            $self->rebuild_render_group('permanent') if $refresh_permanent;
-            $self->rebuild_render_group('new') if $refresh_new;
+            $self->remove_tiles($grid_keys);
         }
 
         # find the centre of the region and then the tile that's closest to it
@@ -2592,31 +2589,21 @@ sub clipboard_operation { #{{{1
 }
 
 ################################################################################
-# remove the specified tiles and return 3 things; the list of keys (required if
-# we're called from cut or area erase and need to create an undo action) and
-# 2 flags indicating whether permanent and/or new tiles were removed.
+# remove the specified tiles
 sub remove_tiles { #{{{1
     my ($self, $grid_keys) = @_;
 
-    my ($refresh_permanent, $refresh_new);
-
     for my $grid_key ( @{ $grid_keys } ) {
         $log->debug("remove $grid_key");
-        delete $self->grid->{$grid_key};
-        if ($self->key_hash->{new}->{$grid_key}) {
-            $refresh_new = 1;
-            delete $self->key_hash->{new}->{$grid_key};
-        }
-        else {
-            $refresh_permanent = 1;
-        }
+        my $old_tile = delete $self->grid->{$grid_key};
+        delete $self->sector->{ $old_tile->{sector} }->{tile}->{ $old_tile->{key} };
+        $self->sector->{ $old_tile->{sector} }->{dirty} = 1;
 
-        # can't be visible or selected once it's deleted...
+        # can't be selected once it's deleted...
         delete $self->key_hash->{select}->{$grid_key};
-        delete $self->key_hash->{visible}->{$grid_key};
     }
 
-    return $refresh_permanent, $refresh_new;
+    return;
 }
 
 ################################################################################
@@ -2922,6 +2909,12 @@ sub add_undo_action { #{{{1
         : $data
     ];
 
+    # check that we've got at least one tile
+    unless (@{ $undo_data}) {
+        $log->logcluck("attempted to add an undo action with no tiles");
+        return;
+    }
+
     my $new_action = [ $action, $undo_data ];
 
     # Are there any items on the redo stack?
@@ -2972,6 +2965,8 @@ sub add_undo_action { #{{{1
         push @{ $self->scene->undo_stack }, $new_action;
     }
 
+    $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
+
     $self->set_undo_redo_button_states;
 
     return;
@@ -2998,7 +2993,7 @@ sub undo_or_redo { #{{{1
         ? ($self->scene->redo_stack, $self->scene->undo_stack, $IsoFrame::AC_ERASE, $IsoFrame::AC_PAINT)  
         : ($self->scene->undo_stack, $self->scene->redo_stack, $IsoFrame::AC_PAINT, $IsoFrame::AC_ERASE);
 
-    my ($refresh_new, $refresh_permanent);
+    my $refresh;
     while ($count && (my $next_action = pop @{ $source_stack } )) {
         $count--;
 
@@ -3013,38 +3008,47 @@ sub undo_or_redo { #{{{1
 
         my ($action, $tiles) = @{ $next_action };
         if ($action eq $erase_action) {
-            my $grid_keys = [ map { "$_->{facing}_$_->{left}_$_->{top}_$_->{right}" } @{ $tiles } ];
-            ($refresh_permanent, $refresh_new) = $self->remove_tiles($grid_keys);
+            $self->remove_tiles([ map { $_->{key} } @{ $tiles } ]);
+            $refresh = 1;
         }
         elsif ($action eq $paint_action) {
             for my $tile ( @{ $tiles } ) {
                 my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
-                $self->grid->{$grid_key} = $tile;
-                $log->debug("undo/redo: paint $grid_key");
+                $self->grid->{$tile->{key}} = $tile;
+                $self->sector->{ $tile->{sector} }->{tile}->{ $tile->{key} } = 1;
+                $self->sector->{ $tile->{sector} }->{dirty} = 1;
+                $log->debug("undo/redo: paint $tile->{key}");
 
-                # put all repainted tiles in new
-                $refresh_new = 1;
-                $self->key_hash->{new}->{$grid_key} = 1;
-                $self->key_hash->{select}->{$grid_key} = 1 if $tile->{selected};
+                $refresh = 1;
+                $self->key_hash->{select}->{$tile->{key}} = 1 if $tile->{selected};
             }
         }
     }
 
-    if (($refresh_permanent || $refresh_new) && ! $no_refresh) {
-        $self->rebuild_and_refresh($refresh_permanent, $refresh_new);
+    if ($refresh && ! $no_refresh) {
+        $self->rebuild_and_refresh;
     }
 
     # return true if we did any work
-    return $refresh_permanent || $refresh_new;
+    return $refresh;
+}
+
+################################################################################
+sub force_rebuild_everywhere { #{{{1
+    my ($self) = @_;
+
+    for my $sector (values %{ $self->sector }) {
+        $sector->{dirty} = 1;
+    }
+
+    return;
 }
 
 ################################################################################
 sub rebuild_and_refresh { #{{{1
-    my ($self, $refresh_permanent, $refresh_new) = @_;
+    my ($self) = @_;
 
     $self->set_undo_redo_button_states;
-    $self->rebuild_render_group('permanent') if $refresh_permanent;
-    $self->rebuild_render_group('new') if $refresh_new;
     $self->rebuild_render_group('select');
     $self->Refresh;
 
@@ -3110,12 +3114,7 @@ sub undo_to_position { #{{{1
     }
 
     # refresh everything
-    $self->rebuild_render_group('permanent');
-    $self->rebuild_render_group('new');
-    $self->rebuild_render_group('select');
-
-    $self->set_undo_redo_button_states;
-    $self->Refresh;
+    $self->rebuild_and_refresh;
 
     return;
 }
@@ -3130,12 +3129,7 @@ sub redo_all_actions { #{{{1
     }
 
     # refresh everything
-    $self->rebuild_render_group('permanent');
-    $self->rebuild_render_group('new');
-    $self->rebuild_render_group('select');
-
-    $self->set_undo_redo_button_states;
-    $self->Refresh;
+    $self->rebuild_and_refresh;
 
     return;
 }
@@ -3312,13 +3306,12 @@ sub select_visible { #{{{1
 
 # TODO {{{1
 
+# checks on size of undo/redo stacks and clipboard, user given option to
+# review the size/contents of these when certain limits are exceeded.
+
 # change cursor color when over red tiles
 
 # autohide error messages
-
-# copy/cut clears selection
-
-# single click to fill in empty sides with shades of clicked tile
 
 # undo stack to include selection (?)
 
@@ -3328,15 +3321,13 @@ sub select_visible { #{{{1
 
 # list of previous colour combinations
 
-# undo/redo multiple actions at once, eg one press of the undo button goes back 10 steps.
-
 # layers, ideally with transparency. Much more possible now we've got OpenGL.
 
 # textures; this may be against the spirit of the program, and may be prohibitively slow.
 
 # art ideas;
 #   Ravenloft-style maps
-#   Cross-sectional scenes, eg mines underground, workings above.
+#   Cross-sectional scenes, eg mines underground, workings above, volcanoes, dungeons.
 #   Sets of small related objects or scenes. Zodiac, famous buildings, workshop machines
 
 1;

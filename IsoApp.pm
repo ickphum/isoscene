@@ -71,7 +71,12 @@ sub new { # {{{1
     $self->config( IsoConfig->new() );
 
     # try to load the most recent file saved
-    my $extension = $self->config->use_compressed_files ? '.isz' : '.isc';
+    my $extension = $self->config->use_binary_files
+        ? '.isb'
+        : $self->config->use_compressed_files 
+            ? '.isz' 
+            : '.isc';
+    $log->info("extension $extension");
     my $filename = $option->{file} ||
         ( @{ $self->config->previous_scene_files } && -f ($self->config->previous_scene_files->[-1] . $extension)
             ? $self->config->previous_scene_files->[-1]
@@ -104,12 +109,14 @@ sub new { # {{{1
             # The short timer has gone off, meaning no mouse activity occurred in the 
             # period, we'll save and restart with the long interval again.
             $log->debug("short timer, save and reset to long");
-            $self->scene->save; 
+
+            $self->scene->background_save;
             $self->config->save; 
             $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
         }
     });
 
+    # don't start the autosave timer while we're playing a script. It will start afterward.
     if (my $file = $option->{script}) {
 
         if (-r $file && -f $file) {
@@ -126,11 +133,8 @@ sub new { # {{{1
         else {
             $log->debug("Script file '$file' is not a readable plain file");
         }
-
     }
     else {
-
-        # don't start the autosave timer while we're playing a script. It will start afterward.
         $self->autosave_timer->Start($self->config->autosave_period_seconds * 1000, wxTIMER_ONE_SHOT);
     }
 
@@ -344,20 +348,16 @@ sub OnInit { # {{{1
 }
 
 ################################################################################
-
-sub OnExit { # {{{1
-    my( $self ) = shift;
-
-    if ($self->config->autosave_on_exit) {
-        $self->scene->save;
-        $self->config->save;
-    }
-
-    return 1;
-}
+# OnExit is called after windows are closed, so don't do anything time-consuming
+# as the user might pull the plug, hit ctrl-c, etc, thinking everything is done.
+#sub OnExit { # {{{1
+#    my( $self ) = shift;
+#
+#    return 1;
+#}
 
 ################################################################################
-sub datetime_description {
+sub datetime_description { #{{{1
     my ($tp) = @_;
 
     my $now = localtime;

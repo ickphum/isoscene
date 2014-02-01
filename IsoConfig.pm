@@ -20,6 +20,7 @@ __PACKAGE__->mk_accessors( qw(
     autosave_period_seconds
     autosave_idle_seconds
     use_compressed_files
+    use_binary_files
     script_delay_milliseconds
     undo_wait_milliseconds
     undo_repeat_milliseconds
@@ -53,6 +54,7 @@ sub new { # {{{1
         autosave_period_seconds => 60,
         autosave_idle_seconds => 2,
         use_compressed_files => 1,
+        use_binary_files => 1,
         script_delay_milliseconds => 50,
         undo_wait_milliseconds => 200,
         undo_repeat_milliseconds => 20,
@@ -67,7 +69,7 @@ sub new { # {{{1
         display_color => 0,
         display_key => 0,
         default_scene_file => 'Start',
-        default_scene_scale => 0.5,
+        default_scene_scale => 1,
         default_scene_left_rgb => '#ca9c5b',
         default_scene_top_rgb => '#e8ba79',
         default_scene_right_rgb => '#ac7e3d',

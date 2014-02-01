@@ -5,3 +5,5 @@ tabe ~/git/isoscene/IsoGlCanvas.pm
 tabe ~/git/isoscene/IsoScene.pm
 tabe ~/git/isoscene/IsoConfig.pm
 tabe ~/git/isoscene/IsoPasteSelector.pm
+tabe ~/git/isoscene/iso.yml
+tabe ~/git/isoscene/iso.vim
