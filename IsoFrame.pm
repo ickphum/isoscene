@@ -284,7 +284,7 @@ sub new { #{{{1
                 my ($self, $event) = @_;
 
                 $log->info("undo_redo_menu @_");
-                my $choices = [ qw(undo_to_branch undo_many redo_many redo_to_branch new_branch) ];
+                my $choices = [ qw(undo_to_branch undo_many redo_many redo_to_branch new_branch clear_undo_info) ];
 
                 # if we're on a branch, display the choose_branch button
                 if ((ref $self->canvas->scene->redo_stack->[-1]) eq 'HASH') {
@@ -1436,6 +1436,12 @@ sub do_undo_redo_tool { #{{{1
         else {
             $frame->display_message("You must undo some actions before creating a branch.");
         }
+    }
+    elsif ($button_name eq 'clear_undo_info') {
+        $frame->canvas->scene->undo_stack([]);
+        $frame->canvas->scene->redo_stack([]);
+        $frame->display_message("Undo & Redo information has been cleared.");
+        $frame->canvas->set_undo_redo_button_states;
     }
 
 

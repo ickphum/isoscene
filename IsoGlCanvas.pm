@@ -2965,7 +2965,7 @@ sub add_undo_action { #{{{1
         push @{ $self->scene->undo_stack }, $new_action;
     }
 
-    $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
+    # $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
 
     $self->set_undo_redo_button_states;
 

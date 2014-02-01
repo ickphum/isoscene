@@ -856,7 +856,7 @@ sub load_binary_file { #{{{1
                             last_current_at => Time::Piece->strptime($epoch_value, '%s'),
                             actions => [],
                         };
-                        $log->info("new branch : " . Dumper($branch));
+                        $log->debug("new branch : " . Dumper($branch)) if $debugging;
 
                         $read_stack_sub->($branch->{actions});
 
