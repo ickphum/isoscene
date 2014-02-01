@@ -114,9 +114,9 @@ sub new { # {{{2
 sub start_thread {
     my ($frame, $event) = @_; @_ = ();
 
+    $frame->{canvas}->result('thread');
     my $thread = threads->create(\&read_file, $frame);
     $thread->detach;
-#    my $rc= $thread->join;
 
     return;
 }
@@ -125,6 +125,8 @@ sub start_thread {
 sub start_read {
     my ($frame, $event) = @_;
 
+    $frame->{canvas}->result('read');
+    $frame->{canvas}->Refresh;
     $frame->read_file;
 
     return;
@@ -134,6 +136,7 @@ sub start_read {
 sub done {
     my ($frame, $event) = @_;
 
+    $log->info("done");
     $frame->{canvas}->result($event->GetData);
     $frame->{canvas}->Refresh;
 }
@@ -142,7 +145,7 @@ sub done {
 sub read_file {
     my ($frame) = @_;
 
-    open( my $fh, "<", 'Xevious.isc')
+    open( my $fh, "<", 'XeviousGL.isc')
         or die "can't read from file";
 
     my $checksum = 0;
