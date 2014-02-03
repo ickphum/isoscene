@@ -56,6 +56,7 @@ sub autosave_thread {
         # proceed with save
 #        print "autosave thread awake ", Dumper($save_data);
         my $data = thaw($save_data);
+        $save_data = undef;
 #        my $yaml_scene = Dump($data);
 #        print "yaml_scene $yaml_scene\n";
 #        print "autosave thread awake $save_data->{scene} $save_data->{frame}\n";
@@ -203,9 +204,9 @@ sub new { # {{{1
 
     my $self = $class->SUPER::new($scene);
 
-    # fix old files with full paths in filename
+    # fix files with full paths in filename or renamed pictures
     if ($arg->{file}) {
-        $self->filename(File::Basename::basename($self->filename, '.isz'));
+        $self->filename(File::Basename::basename($arg->{file}, qw(.isb .isc)));
     }
 
     $self->remember_filename if $self->filename;
