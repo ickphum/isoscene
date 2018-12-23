@@ -85,6 +85,8 @@ unless(caller){
     pod2usage(1) if $options{help};
     pod2usage( -exitstatus => 0, -verbose => 2 ) if $options{man};
 
+    $Data::Dumper::Sortkeys = 1;
+
     # put this in %options
     $options{bin_dir} = $Bin;
 

@@ -25,6 +25,7 @@ __PACKAGE__->mk_accessors( qw(
     undo_wait_milliseconds
     undo_repeat_milliseconds
     undo_many_count
+    undo_includes_view
     repeated_pasting
     repaint_same_tile
     automatic_branching
@@ -59,6 +60,7 @@ sub new { # {{{1
         undo_wait_milliseconds => 200,
         undo_repeat_milliseconds => 20,
         undo_many_count => 100,
+        undo_includes_view => 0,
         repeated_pasting => 1,
         repaint_same_tile => 0,
         automatic_branching => 0,

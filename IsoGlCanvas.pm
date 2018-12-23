@@ -48,7 +48,7 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
 
     render_group texture_id init
 
-    sector all_sectors visible_sectors
+    sector all_sectors visible_sectors previous_dirty_sector
     ));
 
 # globals {{{1
@@ -243,6 +243,7 @@ sub new { #{{{1
 
     $self->transient_grid({});
     $self->key_hash({});
+    $self->previous_dirty_sector({});
 
     $self->calculate_grid_dims(57.735);
 
@@ -255,7 +256,7 @@ sub new { #{{{1
     for my $action (@IsoFrame::ACTIONS) {
 
         # skip the transitory colour change actions
-        next if $action =~ /\A(?:$IsoFrame::AC_SHADE|$IsoFrame::AC_LIGHTEN|$IsoFrame::AC_DARKEN)\z/;
+        next if $action =~ /\A(?:$IsoFrame::AC_SHADE|$IsoFrame::AC_LIGHTEN|$IsoFrame::AC_DARKEN|$IsoFrame::AC_VIEW)\z/;
 
         my $bitmap = $action =~ /erase/
             ? 'erase'
@@ -568,6 +569,7 @@ sub calculate_grid_points { #{{{1
     # the 1 line we're at stage 1, otherwise stage 0.
     my $top_ref_line = ($sectors[0]->[0] + $sectors[0]->[1] / 2 + 1) * $self->y_grid_size * $sector_size;
     my $bottom_ref_line = ($sectors[0]->[0] + $sectors[0]->[1] / 2 + 0.5) * $self->y_grid_size * $sector_size;
+#    $log->info("top_ref_line $top_ref_line, bottom_ref_line $bottom_ref_line");
     my $bottom_stage = 0;
     if ($logical_origin_y <= $bottom_ref_line) {
         $sectors[0]->[0]--;
@@ -840,7 +842,6 @@ sub display_render_group { # {{{1
 
     if (exists $render_group->{color}->{array}) {
         glDisableClientState(GL_COLOR_ARRAY);
-#        glColorPointer_p(3, $render_group->{color}->{array});
     }
     elsif (exists $render_group->{texture}->{array}) {
         glDisable( GL_TEXTURE_2D );
@@ -913,17 +914,31 @@ sub Render { # {{{1
         ? keys %{ $self->sector }
         : @{ $self->visible_sectors };
 
+    my $dirty_sector = {};
+#    $log->info("render: previous_dirty_sector = " . Dumper($self->{previous_dirty_sector}));
     for my $sector_key (@sector_keys) {
         next unless my $sector = $self->sector->{$sector_key};
-        if ($sector->{dirty}) {
+
+        # if we're erasing an area and we reduce the area during selection thus crossing
+        # a sector boundary, we have a problem; the sector which the deletion area has just left
+        # has no reason to be rebuilt (as of now, it simply isn't involved in the process).
+        # We have to keep a record of what the dirty sectors were at each render, and if a sector
+        # drops off that list, build it one more time without adding it to the list.
+        my $force_final_rebuild = (! $sector->{dirty} && $self->previous_dirty_sector->{ $sector_key });
+
+        if ($sector->{dirty} || $force_final_rebuild) {
             $log->debug("rebuild sector $sector_key");
             $self->rebuild_render_group($sector_key);
             $self->make_render_group_array_objects($sector_key);
+
+            # only record legitimately dirty sectors, not ones where we forced it
+            $dirty_sector->{ $sector_key } = 1 if $sector->{dirty};
             $sector->{dirty} = 0;
         }
 #        $log->info("display sector $sector_key");
         $self->display_render_group($sector_key);
     }
+    $self->previous_dirty_sector($dirty_sector);
 
     for my $group (qw(transient select)) {
         $self->display_render_group($group);
@@ -955,6 +970,7 @@ sub Render { # {{{1
 #    glVertex2f(0,5);
 #    glEnd;
 
+    # this is a box around 0,0
     glColor3ub(0xff, 0xff, 0xff);
     glBegin(GL_LINES);
     glVertex2f(1,1);
@@ -1374,9 +1390,7 @@ sub scene { #{{{1
 
         $self->area_tiles([]);
 
-        for my $array (qw(select)) {
-            $self->rebuild_render_group($array);
-        }
+        $self->rebuild_render_group('select');
 
         # initialise the undo/redo buttons to match the new scene
         $self->set_undo_redo_button_states;
@@ -1386,7 +1400,7 @@ sub scene { #{{{1
 }
 
 ################################################################################
-sub create_sector {
+sub create_sector { #{{{1
     my ($self, $sector) = @_;
 
     $log->logdie("sector $sector already exists") if $self->sector->{$sector};
@@ -1427,59 +1441,55 @@ sub find_triangle_coords { #{{{1
 
     my $min_x_is_even = $min_x % 2 == 0;
 
-    my @key = (undef, ($min_y + 0.5) * $self->y_grid_size);
-    $key[0] = $min_x_is_even 
-        ? ($min_x + 1 ) * $self->x_grid_size
-        : $min_x * $self->x_grid_size;
+    my @key = (
+        $min_x_is_even 
+            ? ($min_x + 1 ) * $self->x_grid_size
+            : $min_x * $self->x_grid_size,
+        ($min_y + 0.5) * $self->y_grid_size);
 
     my $point_gradient = ($key[1] - $logical_y)/($key[0] - $logical_x);
 
-    my @anchor = ($min_x * $self->x_grid_size, undef);
+    my $y_anchor;
     my $facing;
 
     if (abs($point_gradient) < $self->control_gradient) {
         if ($min_x_is_even) {
-            $anchor[1] = $min_y + 1;
+            $y_anchor = $min_y + 1;
             $facing = $SH_RIGHT;
         }
         else {
-            $anchor[1] = $min_y + 0.5;
+            $y_anchor = $min_y + 0.5;
             $facing = $SH_LEFT;
         }
     }
     else {
         if ($point_gradient > 0) {
             if ($min_x_is_even) {
-                $anchor[1] = $min_y;
+                $y_anchor = $min_y;
                 $facing = $SH_LEFT;
             }
             else {
-                $anchor[1] = $min_y + 1.5;
+                $y_anchor = $min_y + 1.5;
                 $facing = $SH_RIGHT;
             }
         }
         else {
             if ($min_x_is_even) {
-                $anchor[1] = $min_y + 1;
+                $y_anchor = $min_y + 1;
                 $facing = $SH_LEFT;
             }
             else {
-                $anchor[1] = $min_y + 0.5;
+                $y_anchor = $min_y + 0.5;
                 $facing = $SH_RIGHT;
             }
         }
     }
 
     my $top = $min_x;
-    my $left = $anchor[1] - $top / 2;
+    my $left = $y_anchor - $top / 2;
     my $right = $left + $top;
 
-    $anchor[1] *= $self->y_grid_size;
-
-#    $log->info("pg $point_gradient, cg $control_gradient, min_x $min_x, min_y $min_y, key @key, anchor @anchor, facing $facing");
-#    $log->info("find_triangle_coords $left, $top, $right, $facing");
-
-#    @stash = ($min_x, $min_y, @key, @anchor, $facing);
+    # $log->debug("find_triangle_coords y_anchor $y_anchor, $left, $top, $right, $facing");
 
     return ($left, $top, $right, $facing);
 }
@@ -1639,7 +1649,7 @@ sub mouse_event_handler { #{{{1
                     $self->remove_tiles($deleted_keys);
                     $refresh = 1;
                     $self->key_hash->{erase} = {};
-                    $self->rebuild_render_group('select');
+#                    $self->rebuild_render_group('select');
                 }
                 elsif ($action =~ /select/) {
 
@@ -1850,10 +1860,15 @@ sub mouse_event_handler { #{{{1
             # reset to int 1 when coming back up from fractional end of range
             $scale = 1 if ($scale > 0.9 && $scale < 1.1);
 
+            if ($app->config->undo_includes_view) {
+                $self->add_undo_action($IsoFrame::AC_VIEW, { scale => $self->scene->scale, x => $self->scene->origin_x, y => $self->scene->origin_y });
+            }
+
             $self->scene->scale($scale);
-            $log->debug("scale now $scale");
+            $log->info("scale now $scale");
             $self->scene->origin_x($scale_factor * ($self->scene->origin_x + $logical_x) - $logical_x);
             $self->scene->origin_y($scale_factor * ($self->scene->origin_y + $logical_y) - $logical_y);
+            $log->info("zoom to scale $scale at $logical_x, $logical_y, origin now " . $self->scene->origin_x . ',' . $self->scene->origin_y);
             $self->calculate_grid_points;
             $refresh = 1;
         }
@@ -1861,7 +1876,17 @@ sub mouse_event_handler { #{{{1
 
     # motion while dragging moves origin
     if (defined $device_x && $self->dragging) {
+
+        # to undo, all we need is the old position; the new position is taken from the current settings
+        if ($app->config->undo_includes_view) {
+            $log->info("add view undo");
+            $self->add_undo_action($IsoFrame::AC_VIEW, { scale => $self->scene->scale, x => $self->scene->origin_x, y => $self->scene->origin_y });
+        }
+
         $self->move_origin($device_x, $device_y);
+
+        $log->info("drag at $logical_x, $logical_y, origin now " . $self->scene->origin_x . ',' . $self->scene->origin_y);
+
         $self->calculate_grid_points;
         $refresh = 1;
     }
@@ -2903,30 +2928,43 @@ sub export_scene { #{{{1
 sub add_undo_action { #{{{1
     my ($self, $action, $data) = @_;
 
-    # we want a reference to a list of tiles; we've been passed either a list of keys or a single tile reference.
-    my $undo_data = [ ((ref $data) eq 'ARRAY') 
-        ? map { $self->grid->{$_} } @{ $data } 
-        : $data
-    ];
+    my $new_action;
+    if ($action eq $IsoFrame::AC_VIEW) {
 
-    # check that we've got at least one tile
-    unless (@{ $undo_data}) {
-        $log->logcluck("attempted to add an undo action with no tiles");
-        return;
+        # For view actions, we have a hash which we pass thru as-is.
+        $new_action = $data;
     }
+    else {
 
-    my $new_action = [ $action, $undo_data ];
+        # For paint/erase actions, we want a reference to a list of tiles; we've been passed either a list of keys or a single tile reference.
+        my $undo_data = 
+            [
+                ((ref $data) eq 'ARRAY') 
+                    ? map { $self->grid->{$_} } @{ $data } 
+                    : $data
+            ];
+
+        # check that we've got at least one tile
+        unless (@{ $undo_data}) {
+            $log->logcluck("attempted to add an undo action with no tiles");
+            return;
+        }
+
+        $new_action = [ $action, $undo_data ];
+    }
 
     # Are there any items on the redo stack?
     if (my $new_branch_node = pop @{ $self->scene->redo_stack }) {
 
-        if ((ref $new_branch_node) eq 'HASH' || wxTheApp->config->automatic_branching) {
+        my $new_action_is_branch = IsoScene::action_is_branch($new_branch_node);
+
+        if ($new_action_is_branch || wxTheApp->config->automatic_branching) {
 
             $log->debug("create branch then add new action");
             
             # the thing called new_branch_node may already be a branch node, or it may be a simple action.
             # If the latter, make it into a branch node first, then we can add the new action generically.
-            if ((ref $new_branch_node) ne 'HASH') {
+            unless ($new_action_is_branch) {
 
                 # turn this simple item into a branch item pointing to the top item from the redo stack, 
                 # then we can add the new branch.
@@ -2965,7 +3003,7 @@ sub add_undo_action { #{{{1
         push @{ $self->scene->undo_stack }, $new_action;
     }
 
-    # $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
+    $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
 
     $self->set_undo_redo_button_states;
 
@@ -2997,30 +3035,51 @@ sub undo_or_redo { #{{{1
     while ($count && (my $next_action = pop @{ $source_stack } )) {
         $count--;
 
-        push @{ $target_stack }, $next_action;
-
         # Ok, make the change to the scene.
         # Turn $next_action into a real action if it's a branch node
-        if ((ref $next_action) eq 'HASH') {
+        if (IsoScene::action_is_branch($next_action)) {
+            push @{ $target_stack }, $next_action;
+
             $log->debug("get real action from branch node");
             $next_action = $next_action->{branches}->[ $next_action->{current_branch} ];
         }
 
-        my ($action, $tiles) = @{ $next_action };
-        if ($action eq $erase_action) {
-            $self->remove_tiles([ map { $_->{key} } @{ $tiles } ]);
-            $refresh = 1;
-        }
-        elsif ($action eq $paint_action) {
-            for my $tile ( @{ $tiles } ) {
-                my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
-                $self->grid->{$tile->{key}} = $tile;
-                $self->sector->{ $tile->{sector} }->{tile}->{ $tile->{key} } = 1;
-                $self->sector->{ $tile->{sector} }->{dirty} = 1;
-                $log->debug("undo/redo: paint $tile->{key}");
+        if ((ref $next_action) eq 'HASH') {
+            $log->info("view action " . Dumper($next_action));
 
+            # view actions don't have erase/paint pairs; the alternate values come from
+            # the current settings. 
+            # We always push the current settings onto the target stack
+            push @{ $target_stack }, { scale => $self->scene->scale, x => $self->scene->origin_x, y => $self->scene->origin_y };
+
+            $self->scene->scale($next_action->{scale});
+            $self->scene->origin_x($next_action->{x});
+            $self->scene->origin_y($next_action->{y});
+            $self->calculate_grid_points;
+
+            $refresh = 1;
+
+        }
+        else {
+
+            push @{ $target_stack }, $next_action;
+
+            my ($action, $tiles) = @{ $next_action };
+            if ($action eq $erase_action) {
+                $self->remove_tiles([ map { $_->{key} } @{ $tiles } ]);
                 $refresh = 1;
-                $self->key_hash->{select}->{$tile->{key}} = 1 if $tile->{selected};
+            }
+            elsif ($action eq $paint_action) {
+                for my $tile ( @{ $tiles } ) {
+                    my $grid_key = "$tile->{facing}_$tile->{left}_$tile->{top}_$tile->{right}";
+                    $self->grid->{$tile->{key}} = $tile;
+                    $self->sector->{ $tile->{sector} }->{tile}->{ $tile->{key} } = 1;
+                    $self->sector->{ $tile->{sector} }->{dirty} = 1;
+                    $log->debug("undo/redo: paint $tile->{key}");
+
+                    $refresh = 1;
+                    $self->key_hash->{select}->{$tile->{key}} = 1 if $tile->{selected};
+                }
             }
         }
     }
@@ -3063,7 +3122,7 @@ sub change_to_branch { #{{{1
     # make the selected branch current
 
     my $branch_node = pop @{ $self->scene->redo_stack };
-    return 0 unless (ref $branch_node) eq 'HASH';
+    return 0 unless IsoScene::action_is_branch($branch_node);
     return 0 unless $branch_index <= $#{ $branch_node->{branches} };
 
     # 1. Turn existing current branch into list of redo_stack + current action
@@ -3143,7 +3202,7 @@ sub set_undo_redo_button_states { #{{{1
     my $top_redo_index = $#{ $self->scene->redo_stack };
     my $redo_tooltip = ($top_redo_index + 1) . " actions.";
     my $redo_button_bitmap = 'redo';
-    if ( $top_redo_index >= 0 && (ref $self->scene->redo_stack->[$top_redo_index]) eq 'HASH' ) {
+    if ( $top_redo_index >= 0 && IsoScene::action_is_branch($self->scene->redo_stack->[$top_redo_index])) {
         $redo_button_bitmap = 'branch_redo';
         $redo_tooltip .= ' ' . scalar @{ $self->scene->redo_stack->[$top_redo_index]->{branches} } . ' branches available.';
     }

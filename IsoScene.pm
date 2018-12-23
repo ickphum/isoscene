@@ -18,8 +18,11 @@ use IO::Uncompress::Unzip qw(unzip $UnzipError) ;
 use File::Slurp qw(read_file write_file);
 use POSIX qw(floor);
 use English qw(-no_match_vars);
+use Fcntl qw(:seek);
 
 my $log = get_logger;
+
+my $MAX_VERSION = 2;
 
 # OpenGL doesn't like threads; it always crashes at the end of a detached thread.
 # So, we create a permanent thread to do the autosaves and only wake it up
@@ -217,6 +220,14 @@ sub new { # {{{1
 }
 
 ################################################################################
+# Static function to tell whether an undo/redo action is a branch.
+sub action_is_branch { #{{{1
+    my ($action) = @_;
+
+    return (ref $action) eq 'HASH' && exists $action->{branches};
+}
+
+################################################################################
 sub find_sector_key { #{{{1
     my ($self, $tile) = @_;
 
@@ -339,6 +350,9 @@ File structure
     open (my $fh, '>', $filename)
         or $log->logdie("can't write file $filename: $OS_ERROR");
 
+    # set the file version; for now, always write the highest version
+    $self->{version} = $MAX_VERSION;
+
     # set a flag if we're debugging so we can skip the calls otherwise
     my $debugging = $log->debug("detailed debugging check");
     $log->info("save binary file to $filename; detailed debugging is " . ($debugging ? 'on' : 'off'));
@@ -364,7 +378,7 @@ File structure
     # don't know yet, then the yaml chunk itself
     my $palette_size = scalar @{ $self->{palette} };
     $log->debug("write header, yaml_length $yaml_length, palette_size $palette_size at " . (tell $fh)) if $debugging;
-    print { $fh } pack('CSL3', $self->{version}, $yaml_length, $palette_size, 0, 0, 0), $yaml_chunk;
+    print { $fh } pack('CSL4', $self->{version}, $yaml_length, $palette_size, 0, 0, 0), $yaml_chunk;
 
     # write the palette entries; it's kind of crude to decode the entries again
     # but the scene doesn't have the real values or the brushes, etc, just the string.
@@ -399,9 +413,10 @@ File structure
         $tile_index{$tile} = $tile_count++;
         $grid_count++;
     }
+    $log->debug("done grid tiles");
 
-    # we iterate over the undo & redo lists 3 times; once to find tiles, once
-    # to write codes and once to write item details. Annoying but means
+    # we iterate over the undo & redo lists 2 times; once to find tiles, once
+    # to write codes and item details. Annoying but means
     # memory use is not proportional to stack size, ie we aren't using any
     # temporary lists or buffers.
 
@@ -501,12 +516,13 @@ File structure
         }
 
         while ( my ($stack_index, $item) = each @{ $stack } ) {
-            $log->debug("write stack item $stack_index") if $debugging;
+            $log->debug("write stack item $stack_index" . Dumper($item)) if $debugging;
             my $item_ref = ref $item;
             if ($item_ref eq 'ARRAY') {
 
                 # regular paint/erase item, with a list of affected tiles, any of which may already have
                 # been written.
+                $log->debug("write regular item") if $debugging;
                 $write_stack_item->($item, $write_tiles);
             }
             elsif ($item_ref eq 'HASH') {
@@ -552,8 +568,45 @@ File structure
                         }
                     }
                 }
+                elsif (exists $item->{scale}) {
+                    $log->debug("found a view item" . Dumper($item));
+
+                    # view items must encode scale and device origin x&y. Panning doesn't change
+                    # scale but zooming does change origin, so we use a common format for both.
+                    # Keep the top bit clear to distinguish these from normal items (as for choices)
+                    # but then we need to distinguish from choices, which currently have the whole top
+                    # byte clear. Scale ranges from 0.25 to 32; we'll * by 4 & subtract 1 to get 0-127,
+                    # ie 7 bits.
+                    # From the top byte down:
+                    # 0 - clear so not a normal item
+                    # 1 - set so not a choice item
+                    # 2 - set if either origin needs more than 11 bits
+                    # 3-9 - scale
+                    # 10-20 - 11 bits for x origin; 0 - 2047, so store origin + 1024.
+                    # 21-31 - 11 bits for y origin
+                    my $scale_code = $item->{scale} * 4 - 1;
+                    my $x_code = $item->{x} + 2 ** 10;
+                    my $y_code = $item->{y} + 2 ** 10;
+                    my $view_code = ($x_code > 0 && $x_code < 2 ** 11 && $y_code > 0 && $y_code < 2 ** 11)
+                        ? 2 << 29   # 010; 01 = view item, 0 = view item contains origin
+                            | $scale_code << 22
+                            | $x_code << 11
+                            | $y_code
+                        : 3 << 29   # 011; 01 = view item, 1 = origin follows in next word (2x16 bits)
+                            | $scale_code << 22;
+                    $log->info(sprintf("write view %032b at ", $view_code) . (tell $fh)) if $debugging;
+                    print { $fh } pack('L', $view_code);
+
+                    # if either origin is outside the range -1024 - 1023, we have to
+                    # write them as 16 bit values, giving us -32767 - 32768.
+                    if ($view_code & 0x20000000) {
+                        my $origin_code = ($item->{x} + 2 ** 15) << 16 | ($item->{y} + 2 ** 15);
+                        $log->info(sprintf("write origin code %032b at ", $origin_code) . (tell $fh)) if $debugging;
+                        print { $fh } pack('L', $origin_code);
+                    }
+                }
                 else {
-                    $log->logdie("found a hash in a stack but it's not a choice hash : " . Dumper($item));
+                    $log->logdie("found a hash in a stack but it's not a choice or a view : " . Dumper($item));
                 }
             }
                             
@@ -576,6 +629,8 @@ File structure
     # write the clipboard tiles; these are never shared with the grid or either
     # stack so we don't need to track the index, so they can appear by themselves.
     $log->debug("write clipboard count at " . (tell $fh)) if $debugging;
+    my $clipboard_offset = tell $fh;
+    $log->debug(sprintf "clipboard_offset %d %08x", $clipboard_offset, $clipboard_offset) if $debugging;
     print { $fh } pack('L', scalar @{ $self->{clipboard} });
     $log->debug("write clipboard entries at " . (tell $fh)) if $debugging;
     while ( my (undef, $item) = each @{ $self->{clipboard} }) {
@@ -594,8 +649,8 @@ File structure
 
     # return to the start of the file and write the data counts. Actual sizes are
     # derived from the file version at load.
-    seek $fh, 7, 0;
-    print { $fh } pack('L2', $tile_count, $grid_count);
+    seek $fh, 7, SEEK_SET;
+    print { $fh } pack('L3', $tile_count, $grid_count, $clipboard_offset);
 
     close($fh) or $log->logwarn("error closing binary file $filename: $OS_ERROR");
     $log->info("finished writing binary file");
@@ -674,9 +729,9 @@ sub read_tile { #{{{1
     (my $compound_byte, $tile->{left}, $tile->{top}, $tile->{right}, $tile->{brush_index}) 
         = read_and_unpack($fh, 'CsssL', 11) or return;
 
-    my @Code_shapes : shared = qw(X L T R TR TL);
+    my @code_shapes = qw(X L T R TR TL);
 
-    $tile->{shape} = $Code_shapes[ $compound_byte & 0x07 ];
+    $tile->{shape} = $code_shapes[ $compound_byte & 0x07 ];
 
     $tile->{facing} = ($compound_byte & 0x08) ? 'L' : 'R';
     $tile->{selected} = ($compound_byte & 0x10) >> 4;
@@ -703,7 +758,7 @@ sub load_binary_file { #{{{1
 
     # read version byte
     my ($version) = read_and_unpack($fh, 'C', 1) or return;
-    if ($version > 1) {
+    if ($version > $MAX_VERSION) {
         $log->warn("unknown version : $version");
         return;
     }
@@ -711,6 +766,12 @@ sub load_binary_file { #{{{1
     # read the YAML size and the data counts
     my ($yaml_length, $palette_count, $tile_count, $grid_count) = read_and_unpack($fh, 'SL3', 14);
     $log->debug("yaml_length, palette_count, tile_count, grid_count = $yaml_length, $palette_count, $tile_count, $grid_count") if $debugging;
+
+    # if version >= 2, read the clipboard offset
+    my $clipboard_offset = -1;
+    if ($version >= 2) {
+        ($clipboard_offset) = read_and_unpack($fh, 'L', 4);
+    }
 
     # read the YAML chunk
     my $yaml_chunk;
@@ -754,7 +815,7 @@ sub load_binary_file { #{{{1
     # read the next item and process it if it's a normal item;
     # we need this behaviour isolated so we can also use to read the
     # active branch.
-    my $read_normal_item = sub {
+    my $read_non_branch_item = sub {
         my ($fh, $stack) = @_;
 
         # every item begins with a 32 bit value, which we examine to determine
@@ -795,8 +856,36 @@ sub load_binary_file { #{{{1
                     push @{ $item->[1] }, $tiles[ $tile_index ];
                 }
             }
+            else {
+                $log->debug("read single item") if $debugging;
+            }
 
             # add the item to the stack
+            push @{ $stack }, $item;
+        }
+        elsif ($item_code & 0x40000000) {
+
+            # view code; we can always get the scale from the code, we might be able to get the origin too
+            # or that might be in a succeeding word.
+            my $item = {
+                scale => ((($item_code & 0x1FC00000) >> 22) + 1) / 4,
+            };
+                
+            if ($item_code & 0x20000000) {
+
+                # extended view item; read another word
+                my $origin_code = read_and_unpack($fh, 'L', 4);
+                $item->{x} = (($origin_code & 0xFFFF0000) >> 16) - 2 ** 15;
+                $item->{y} = ($origin_code & 0x0000FFFF) - 2 ** 15;
+            }
+            else {
+
+                # simple view item, get origin from view code
+                $item->{x} = (($item_code & 0x003FF800) >> 11) - 2 ** 10;
+                $item->{y} = ($item_code & 0x000007FF) - 2 ** 10;
+            }
+
+            $log->info("read view code, item: " . Dumper($item));
             push @{ $stack }, $item;
         }
 
@@ -820,13 +909,16 @@ sub load_binary_file { #{{{1
             # we need this behaviour isolated so we can also use to read the
             # active branch.
             $log->debug("read stack item $stack_index") if $debugging;
-            my $item_code = $read_normal_item->($fh, $stack);
+            my $item_code = $read_non_branch_item->($fh, $stack);
             unless (defined $item_code) {
                 $log->warn("didn't read lead item code");
                 return;
             }
 
-            unless ($item_code & 0x80000000) {
+            # filter out normal items (top bit set) and view items (second-top bit set)
+            unless ($item_code & 0xC0000000) {
+
+                $log->debug(sprintf("read choice item %032b", $item_code));
 
                 # choice item; the branch information is coded in the bottom 3 bytes of the item code.
                 my $branch_count = $item_code & 0xfff;
@@ -842,7 +934,7 @@ sub load_binary_file { #{{{1
                     if ($branch_index == $choice_item->{current_branch}) {
 
                         # this is the next step in the current branch, ie a standard paint/erase item.
-                        $read_normal_item->($fh, $choice_item->{branches});
+                        $read_non_branch_item->($fh, $choice_item->{branches});
                         unless (defined $item_code) {
                             $log->warn("didn't active branch item code");
                             return;
@@ -882,8 +974,40 @@ sub load_binary_file { #{{{1
     $log->debug("load to redo_stack at " . (tell $fh)) if $debugging;
     $read_stack_sub->($scene->{redo_stack}) or return;
 
+    $scene->{clipboard} = read_clipboard_items($fh, $scene)
+        or return;
+
+    return $scene;
+}
+
+################################################################################
+sub read_and_unpack { #{{{1
+    my ($fh, $format, $length) = @_;
+
+    my $buffer;
+    if (read($fh, $buffer, $length) != $length) {
+
+        # this might need to go before the read; if we read past eof, it might be too late
+        my $pos = tell $fh;
+
+        $log->warn("didn't read $length bytes at $pos");
+        return;
+    }
+#    my @bytes = unpack("C*", $buffer);
+#    $log->info("read_and_unpack: format $format, read bytes " .  join(' ', map { sprintf("%02x", $_) } @bytes));
+    return unpack($format, $buffer);
+}
+
+################################################################################
+# This routine is called from two contexts; either to load all the clipboard items
+# into a scene during load, or to read the tile details for a single item if
+# we're pasting from a different scene; in this case, a name is supplied.
+# We're assuming the file is correctly positioned at the clipboard count data.
+sub read_clipboard_items { #{{{1
+    my ($fh, $scene, $item_name) = @_;
+
     # read the clipboard count
-    $log->debug("read clipboard count at " . (tell $fh)) if $debugging;
+    my $debugging = $log->debug("read clipboard count at " . (tell $fh));
     my $clipboard_count = read_and_unpack($fh, 'L', 4);
     unless (defined $clipboard_count) {
         $log->warn("failed to read clipboard_count");
@@ -891,7 +1015,8 @@ sub load_binary_file { #{{{1
     }
 
     $log->debug("read $clipboard_count clipboard entries at " . (tell $fh)) if $debugging;
-    $scene->{clipboard} = [];
+
+    my $list = [];
     for my $i (0 .. $clipboard_count - 1) {
 
         my $item = {
@@ -910,28 +1035,93 @@ sub load_binary_file { #{{{1
             push @{ $item->{tiles} }, $tile;
         }
 
-        push @{ $scene->{clipboard} }, $item;
+        if ($item_name) {
+            if ($item_name eq $item->{name}) {
+                return $item;
+            }
+        }
+        else {
+            push @{ $list }, $item;
+        }
     }
 
-    return $scene;
+    return $item_name ? undef : $list;
 }
 
 ################################################################################
-sub read_and_unpack { #{{{{1
-    my ($fh, $format, $length) = @_;
+# We've chosen a clipboard item from a different scene; we know the scene name
+# and the item name (both are encoded in the thumbnail name). We want to open the
+# scene file and read the tile list for the specified clipboard item.
+# SIDE EFFECT; the palette in the current scene will be expanded as necessary
+# to include the colors in the clipboard item.
+sub read_clipboard_item { #{{{1
+    my ($canvas, $scene_name, $clipboard_item_name) = @_;
 
-    my $buffer;
-    if (read($fh, $buffer, $length) != $length) {
+    $log->info("scene_name $scene_name, clipboard_item_name $clipboard_item_name");
 
-        # this might need to go before the read; if we read past eof, it might be too late
-        my $pos = tell $fh;
+    my $filename = "$scene_name.isb";
 
-        $log->warn("didn't read $length bytes at $pos");
-        return;
+    # Should have been trapped in the paste dialog?
+    return undef, "Scene file '$filename' doesn't exist." unless -f $filename;
+
+    open (my $fh, '<', $filename)
+        or return undef, "can't read file $filename: $OS_ERROR";
+
+    my $debugging = $log->debug("load_binary_file; detailed debugging is on.");
+
+    # read version byte
+    my ($version) = read_and_unpack($fh, 'C', 1) or return;
+    return undef, "Couldn't read version from scene file." unless defined $version;
+    return undef, "Unknown version '$version'; may not be a scene file." if $version > $MAX_VERSION;
+    return undef, "Can't paste from v1 files; resave $scene_name to upgrade it." if $version < 2;
+
+    # read the YAML size and the palette count
+    my ($yaml_length, $palette_count) = read_and_unpack($fh, 'SL', 6);
+    $log->debug("yaml_length, palette_count = $yaml_length, $palette_count") if $debugging;
+
+    # skip the tile counts
+    seek $fh, 8, SEEK_CUR;
+
+    # read the clipboard offset
+    my ($clipboard_offset) = read_and_unpack($fh, 'L', 4);
+    return undef, "Couldn't read clipboard offset from scene file." unless defined $clipboard_offset;
+    $log->debug(sprintf "clipboard_offset %d %08x", $clipboard_offset, $clipboard_offset) if $debugging;
+
+    # skip the YAML content
+    seek $fh, $yaml_length, SEEK_CUR;
+#    read($fh, my $yaml_chunk, $yaml_length + 8);
+
+    # read the palette entries; we'll need these to convert the brush indexes in the clipboard scene
+    # to brush indexes in the current scene
+    $log->debug("read palette entries at " . (tell $fh)) if $debugging;
+    my @palette = ();
+    for my $i (0 .. $palette_count - 1) {
+        my @rgb = read_and_unpack($fh, 'C3', 3);
+        $palette[$i] = sprintf('#%02X%02X%02X', @rgb);
     }
-#    my @bytes = unpack("C*", $buffer);
-#    $log->info("read_and_unpack: format $format, read bytes " .  join(' ', map { sprintf("%02x", $_) } @bytes));
-    return unpack($format, $buffer);
+
+    # jump to the clipboard
+    seek $fh, $clipboard_offset, SEEK_SET;
+
+    # find the item by name in the other scene's clipboard
+    my $clipboard_item = read_clipboard_items($fh, $canvas->scene, $clipboard_item_name)
+        or return undef, "Couldn't find item '$clipboard_item_name' in ${scene_name}'s clipboard.";
+
+    # convert brush indexes
+    my @new_tile_indexes;
+    for my $tile ( @{ $clipboard_item->{tiles} } ) {
+
+        # we're caching new indexes so we only check each index once
+        unless (defined $new_tile_indexes[ $tile->{brush_index} ]) {
+
+            # find the index for this color string in the current scene (adds automatically if req)
+            $new_tile_indexes[ $tile->{brush_index} ] = $canvas->get_palette_index( $palette[ $tile->{brush_index} ] );
+        }
+        $tile->{brush_index} = $new_tile_indexes[ $tile->{brush_index} ];
+    }
+
+    # return list of tiles
+    return $clipboard_item->{tiles};
 }
 
 ################################################################################

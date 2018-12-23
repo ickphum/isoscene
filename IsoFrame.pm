@@ -97,7 +97,8 @@ our @ACTIONS = our (
     $AC_SELECT_OTHERS,
     $AC_SELECT_ALL,
     $AC_CHOOSE_BRANCH,
-    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade shade_cube import paste select_current select_others select_all choose_branch);
+    $AC_VIEW,
+    ) = qw(paint sample erase_current erase_others erase_all lighten darken shade shade_cube import paste select_current select_others select_all choose_branch view);
 
 my @MENU_ITEMS = my (
     $MI_NEW,
@@ -287,7 +288,7 @@ sub new { #{{{1
                 my $choices = [ qw(undo_to_branch undo_many redo_many redo_to_branch new_branch clear_undo_info) ];
 
                 # if we're on a branch, display the choose_branch button
-                if ((ref $self->canvas->scene->redo_stack->[-1]) eq 'HASH') {
+                if (IsoScene::action_is_branch($self->canvas->scene->redo_stack->[-1])) {
                     push @{ $choices }, 'choose_branch';
                 }
 
@@ -333,6 +334,7 @@ sub new { #{{{1
                 undo_wait_milliseconds
                 undo_repeat_milliseconds
                 undo_many_count
+                undo_includes_view
                 repeated_pasting
                 repaint_same_tile
                 automatic_branching
@@ -354,7 +356,7 @@ sub new { #{{{1
 
             # append the current value to the boolean options; these will become
             # toggle items.
-            for my $option (qw(autosave_on_exit use_binary_files use_compressed_files repeated_pasting repaint_same_tile automatic_branching display_palette_index display_color display_key)) {
+            for my $option (qw(autosave_on_exit use_binary_files use_compressed_files undo_includes_view repeated_pasting repaint_same_tile automatic_branching display_palette_index display_color display_key)) {
                 my $index = List::MoreUtils::firstidx { $_ eq $option } @config_options;
                 splice @config_options, $index, 1, $option . "?" . $app->config->$option;
             }
@@ -657,7 +659,7 @@ sub do_menu_choice { #{{{1
         my $option = $1;
         
         # boolean options are toggle items, so selecting one just flips the state
-        if ($option =~ /autosave_on_exit|use_binary_files|use_compressed_files|repeated_pasting|repaint_same_tile|automatic_branching|display_palette_index|display_color|display_key/) {
+        if ($option =~ /autosave_on_exit|use_binary_files|use_compressed_files|undo_includes_view|repeated_pasting|repaint_same_tile|automatic_branching|display_palette_index|display_color|display_key/) {
             $app->config->$option($app->config->$option ? 0 : 1);
             $log->info("config setting for $option is now " . $app->config->$option);
         }
@@ -1055,7 +1057,7 @@ sub open_from_file { #{{{1
             'Open Scene from file',
             '',
             '',
-            'IsoScene files (*.isz;*.isc)|*.isz;*.isc',
+            'IsoScene files (*.isb;*.isz;*.isc)|*.isb;*.isz;*.isc',
             wxFD_OPEN);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;
@@ -1353,7 +1355,7 @@ sub do_undo_redo_tool { #{{{1
         # grab the top item on the redo stack; it should be a branch node
         my $branch_node = $frame->canvas->scene->redo_stack->[-1];
         $log->logdie("top redo item not a branch node: " . Dumper($branch_node))
-            unless (ref $branch_node) eq 'HASH';
+            unless IsoScene::action_is_branch($branch_node);
 
         # we have a list of branches in $branch_node->{branches}
         $log->debug("branches " . Dumper($branch_node->{branches}));
@@ -1394,7 +1396,7 @@ sub do_undo_redo_tool { #{{{1
         if (@{ $frame->canvas->scene->undo_stack }) {
             while (1) {
                 last unless $frame->canvas->undo_or_redo(0,1);
-                last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
+                last if IsoScene::action_is_branch($frame->canvas->scene->redo_stack->[-1]);
             }
             $frame->canvas->rebuild_and_refresh;
         }
@@ -1406,7 +1408,7 @@ sub do_undo_redo_tool { #{{{1
         if (@{ $frame->canvas->scene->redo_stack }) {
             while (1) {
                 last unless $frame->canvas->undo_or_redo(1,1);
-                last if (ref $frame->canvas->scene->redo_stack->[-1]) eq 'HASH';
+                last if IsoScene::action_is_branch($frame->canvas->scene->redo_stack->[-1]);
             }
             $frame->canvas->rebuild_and_refresh;
         }
@@ -1417,7 +1419,10 @@ sub do_undo_redo_tool { #{{{1
     elsif ($button_name eq 'new_branch') {
         if (@{ $frame->canvas->scene->redo_stack }) {
 
-            if ((ref $frame->canvas->scene->redo_stack->[-1]) ne 'HASH') {
+            if (IsoScene::action_is_branch($frame->canvas->scene->redo_stack->[-1])) {
+                $frame->display_message("There is already a branch at this point.");
+            }
+            else {
 
                 # turn this normal node into a branch node, so that if we do a new action at this
                 # point, the old redo stack will be preserved as a branch.
@@ -1428,9 +1433,6 @@ sub do_undo_redo_tool { #{{{1
                 };
                 push @{ $frame->canvas->scene->redo_stack }, $branch_node;
                 $frame->display_message("Branch created.");
-            }
-            else {
-                $frame->display_message("There is already a branch at this point.");
             }
         }
         else {

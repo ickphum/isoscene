@@ -739,6 +739,12 @@ sub mouse_event_handler { #{{{1
     # motion while dragging moves origin
     if (defined $device_x && $self->dragging) {
         $self->move_origin($device_x, $device_y);
+        if ($app->config->undo_includes_view) {
+
+            # to undo, all we need is the old position
+            $log->info("add pan undo");
+            $self->add_undo_action($IsoFrame::AC_PAN, { x => $self->last_device_x, y => $self->last_device_y });
+        }
         $refresh = 1;
     }
 

@@ -63,24 +63,30 @@ sub new { # {{{2
 #################################################################################
 package TestFrame; # {{{1
 
+use strict;
+use warnings;
+
 use Wx qw[:everything];
 use Data::Dumper qw(Dumper);
 use base qw(Wx::Frame);
-use strict;
+use Convert::Color;
+use Convert::Color::RGB8;
+use Math::Round;
 
 sub new { # {{{2
     my( $self, $parent, $id, $title, $pos, $size, $style, $name ) = @_;
 
-    $self = $self->SUPER::new( undef , -1, 'Test', [ 2000, 400 ], [ 400, 300 ]);
+    $self = $self->SUPER::new( undef , -1, 'Test', [ 1000, 100 ], [ 400, 300 ]);
     $self->{v_sizer} = Wx::BoxSizer->new(wxVERTICAL);
-    $self->{canvas} = TestCanvas->new($self);
-    $self->{v_sizer}->Add($self->{canvas}, 1, wxEXPAND, 1);
-    for my $label (qw(start_thread start_read)) {
+#    $self->{canvas} = TestCanvas->new($self);
+#    $self->{v_sizer}->Add($self->{canvas}, 1, wxEXPAND, 1);
+    for my $label (qw(darken lighten)) {
         my $button = Wx::Button->new($self, -1, $label);
+        $button->SetName($label);
 
         my $button_handler = {
-            start_thread => \&start_thread,
-            start_read => \&start_read,
+            darken => \&darken,
+            lighten => \&darken,
         };
 
         if (my $handler = $button_handler->{$label}) {
@@ -95,7 +101,10 @@ sub new { # {{{2
     }
 
     $self->{label} = Wx::StaticText->new($self, -1, "test label", wxDefaultPosition, wxDefaultSize);
-    $self->{v_sizer}->Add($self->{label}, 1, wxEXPAND, 1);
+    $self->{v_sizer}->Add($self->{label}, 0, 0, 0);
+    $self->{panel} = Wx::Panel->new($self);
+    $self->{v_sizer}->Add($self->{panel}, 1, wxEXPAND, 1);
+    $self->{panel}->SetBackgroundColour(Wx::Colour->new(172,126,61));
 
     $self->{undo_stack} = [];
     $self->{redo_stack} = [];
@@ -111,12 +120,28 @@ sub new { # {{{2
 }
 
 #################################################################################
-sub start_thread {
+sub darken {
     my ($frame, $event) = @_; @_ = ();
 
-    $frame->{canvas}->result('thread');
-    my $thread = threads->create(\&read_file, $frame);
-    $thread->detach;
+    my $inc = $event->GetEventObject->GetName eq 'darken'
+        ? -0.05
+        : 0.05;
+
+    my $colour = $frame->{panel}->GetBackgroundColour;
+    my @rgb = ( $colour->Red, $colour->Green, $colour->Blue );
+    my $converter = Convert::Color::RGB8->new( @rgb );
+    my $hsv = $converter->convert_to('hsv');
+    my ($h, $s, $v) = Math::Round::nearest(0.01, $hsv->hsv);
+
+    $log->info("RGB @rgb, hsv $h $s $v");
+    $v += $inc;
+    $v = 0 if $v < 0;
+    $v = 1 if $v > 1;
+    my $c2 = Convert::Color::HSV->new($h, $s, $v);
+    my $rgb8 = $c2->convert_to('rgb8');
+    $log->info("new rgb " . join(',', $rgb8->rgb8) . ' or ' . $rgb8->hex);
+    my $new_color = Wx::Colour->new($rgb8->rgb8);
+    $frame->{panel}->SetBackgroundColour(Wx::Colour->new($rgb8->rgb8));
 
     return;
 }
