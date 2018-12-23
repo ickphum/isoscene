@@ -44,7 +44,7 @@ sub new { # {{{1
     for my $image_name (qw(move area_L area_T area_R flood)) {
         push @images, "${image_name}_on", "${image_name}_off";
     }
-    for my $action (grep { $_ !~ /$IsoFrame::AC_IMPORT|$IsoFrame::AC_PASTE|$IsoFrame::AC_CHOOSE_BRANCH/ } @IsoFrame::ACTIONS) {
+    for my $action (grep { $_ !~ /$IsoFrame::AC_IMPORT|$IsoFrame::AC_PASTE|$IsoFrame::AC_CHOOSE_BRANCH|$IsoFrame::AC_VIEW/ } @IsoFrame::ACTIONS) {
         if ($action =~ /_all\z/) {
             push @images, "action_${action}";
         }
@@ -222,7 +222,7 @@ sub do_script_action { #{{{1
         # we're finished when the top item on the redo stack is a branch; note that we don't want to
         # end (here) when the stack is empty, we want to fail when the next action is attempted.
         if (scalar @{ $self->scene->redo_stack }) {
-            $finished = (ref $self->scene->redo_stack->[-1]) eq 'HASH';
+            $finished = IsoScene::action_is_branch($self->scene->redo_stack->[-1]);
         }
     }
     elsif ($action =~ /delay|branch|message/) {
