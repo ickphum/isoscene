@@ -1,0 +1,45 @@
+---
+background_rgb: '#D3D3D3'
+bg_line_rgb: '#FFFFFF'
+origin_x: 0
+origin_y: 0
+palette:
+  colors:
+    - ffffff
+    - ab75bf
+    - 8222a5
+    - 973c00
+    - cf5809
+    - e89723
+    - 53d420
+    - 3a9516
+    - 25600e
+    - fdfb37
+    - 37c7fd
+    - 235fc4
+    - 230ec4
+    - cccccc
+    - 999999
+    - 666666
+    - 70ff70
+    - 23c523
+    - 006300
+    - 003500
+    - 7efcff
+    - 43befd
+    - 295cdc
+    - 0000ff
+    - eeeeee
+    - cccccc
+    - aaaaaa
+    - 888888
+    - 666666
+    - 444444
+    - 222222
+    - 000000
+  left: 2
+  right: 3
+  top: 1
+scale: 1
+scene: {}
+tile_line_rgb: '#D3D3D3'

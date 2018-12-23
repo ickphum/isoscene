@@ -1,0 +1,5184 @@
+---
+background_rgb: '#105527'
+bg_line_rgb: '#203C25'
+origin_x: 866.5
+origin_y: 246.75
+palette:
+  colors:
+  - ffffff
+  - ab75bf
+  - 8222a5
+  - ffb671
+  - e89723
+  - cf5809
+  - 973c00
+  - 3a9516
+  - 25600e
+  - fffe74
+  - ffff00
+  - ff4600
+  - ff4a4a
+  - ff0000
+  - c50000
+  - 830000
+  - 70ff70
+  - 23c523
+  - 006300
+  - 003500
+  - 7efcff
+  - 43befd
+  - 295cdc
+  - 0000ff
+  - eeeeee
+  - cccccc
+  - aaaaaa
+  - 888888
+  - 666666
+  - 444444
+  - 222222
+  - 000000
+  left: 18
+  right: 19
+  top: 12
+scale: 0.25
+scene:
+  -18_-1:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -1
+  -18_-2:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -2
+  -18_-3:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -3
+  -18_-4:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -4
+  -18_-5:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -5
+  -18_-6:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: -6
+  -18_0:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 0
+  -18_1:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 1
+  -18_2:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 2
+  -18_3:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 3
+  -18_4:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 4
+  -18_5:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 5
+  -18_6:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 6
+  -18_7:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 7
+  -18_8:
+    brush_index: 18
+    major_column: -9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -18
+    y: 8
+  -19_0:
+    brush_index: 17
+    major_column: -10
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: -19
+    y: 0
+  -19_1:
+    brush_index: 17
+    major_column: -10
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: -19
+    y: 1
+  -19_2:
+    brush_index: 17
+    major_column: -10
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: -19
+    y: 2
+  -19_3:
+    brush_index: 17
+    major_column: -10
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: -19
+    y: 3
+  -1_-2:
+    brush_index: 17
+    major_column: -1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -1
+    y: -2
+  -1_-5:
+    brush_index: 17
+    major_column: -1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -1
+    y: -5
+  -1_-8:
+    brush_index: 17
+    major_column: -1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -1
+    y: -8
+  -1_32:
+    brush_index: 25
+    major_column: -1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -1
+    y: 32
+  -1_35:
+    brush_index: 25
+    major_column: -1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -1
+    y: 35
+  -20_-1:
+    brush_index: 19
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: -20
+    y: -1
+  -20_-2:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: -2
+  -20_-3:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: -3
+  -20_-4:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: -4
+  -20_-5:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: -5
+  -20_-6:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: -6
+  -20_0:
+    brush_index: 19
+    major_column: -10
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: -20
+    y: 0
+  -20_4:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: 4
+  -20_5:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: 5
+  -20_6:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: 6
+  -20_7:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: 7
+  -20_8:
+    brush_index: 18
+    major_column: -10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -20
+    y: 8
+  -21_1:
+    brush_index: 17
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -21
+    y: 1
+  -21_2:
+    brush_index: 17
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -21
+    y: 2
+  -21_3:
+    brush_index: 17
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -21
+    y: 3
+  -22_-1:
+    brush_index: 19
+    major_column: -11
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -22
+    y: -1
+  -22_-2:
+    brush_index: 19
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: -22
+    y: -2
+  -22_-3:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: -3
+  -22_-4:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: -4
+  -22_-5:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: -5
+  -22_-6:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: -6
+  -22_-7:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: -7
+  -22_0:
+    brush_index: 19
+    major_column: -11
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -22
+    y: 0
+  -22_3:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: 3
+  -22_4:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: 4
+  -22_5:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: 5
+  -22_6:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: 6
+  -22_7:
+    brush_index: 18
+    major_column: -11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -22
+    y: 7
+  -23_1:
+    brush_index: 17
+    major_column: -12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -23
+    y: 1
+  -23_2:
+    brush_index: 17
+    major_column: -12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -23
+    y: 2
+  -24_-1:
+    brush_index: 19
+    major_column: -12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: -24
+    y: -1
+  -24_-2:
+    brush_index: 19
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: -24
+    y: -2
+  -24_-3:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: -3
+  -24_-4:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: -4
+  -24_-5:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: -5
+  -24_-6:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: -6
+  -24_-7:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: -7
+  -24_0:
+    brush_index: 19
+    major_column: -12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: -24
+    y: 0
+  -24_1:
+    brush_index: 19
+    major_column: -12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: -24
+    y: 1
+  -24_3:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: 3
+  -24_4:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: 4
+  -24_5:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: 5
+  -24_6:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: 6
+  -24_7:
+    brush_index: 18
+    major_column: -12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -24
+    y: 7
+  -25_2:
+    brush_index: 17
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -25
+    y: 2
+  -26_-1:
+    brush_index: 19
+    major_column: -13
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -26
+    y: -1
+  -26_-2:
+    brush_index: 19
+    major_column: -13
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -26
+    y: -2
+  -26_-3:
+    brush_index: 19
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: -26
+    y: -3
+  -26_-4:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: -4
+  -26_-5:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: -5
+  -26_-6:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: -6
+  -26_-7:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: -7
+  -26_-8:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: -8
+  -26_0:
+    brush_index: 19
+    major_column: -13
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -26
+    y: 0
+  -26_1:
+    brush_index: 19
+    major_column: -13
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -26
+    y: 1
+  -26_2:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: 2
+  -26_3:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: 3
+  -26_4:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: 4
+  -26_5:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: 5
+  -26_6:
+    brush_index: 18
+    major_column: -13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: -26
+    y: 6
+  -28_-1:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -1
+  -28_-2:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -2
+  -28_-3:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -3
+  -28_-4:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -4
+  -28_-5:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -5
+  -28_-6:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -6
+  -28_-7:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -7
+  -28_-8:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: -8
+  -28_0:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 0
+  -28_1:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 1
+  -28_2:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 2
+  -28_3:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 3
+  -28_4:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 4
+  -28_5:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 5
+  -28_6:
+    brush_index: 18
+    major_column: -14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: -28
+    y: 6
+  -2_33:
+    brush_index: 29
+    major_column: -1
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: -2
+    y: 33
+  -3_-3:
+    brush_index: 17
+    major_column: -2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -3
+    y: -3
+  -3_-5:
+    brush_index: 17
+    major_column: -2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -3
+    y: -5
+  -3_1:
+    brush_index: 17
+    major_column: -2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -3
+    y: 1
+  -3_32:
+    brush_index: 25
+    major_column: -2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -3
+    y: 32
+  -4_34:
+    brush_index: 29
+    major_column: -2
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: -4
+    y: 34
+  -5_-2:
+    brush_index: 17
+    major_column: -3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -5
+    y: -2
+  -5_0:
+    brush_index: 17
+    major_column: -3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -5
+    y: 0
+  -5_33:
+    brush_index: 25
+    major_column: -3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -5
+    y: 33
+  -7_-2:
+    brush_index: 17
+    major_column: -4
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -7
+    y: -2
+  -7_33:
+    brush_index: 25
+    major_column: -4
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: -7
+    y: 33
+  -9_-1:
+    brush_index: 17
+    major_column: -5
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: -9
+    y: -1
+  0_33:
+    brush_index: 29
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 0
+    y: 33
+  10_30:
+    brush_index: 29
+    major_column: 5
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 10
+    y: 30
+  10_31:
+    brush_index: 27
+    major_column: 5
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 10
+    y: 31
+  10_33:
+    brush_index: 29
+    major_column: 5
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 10
+    y: 33
+  10_34:
+    brush_index: 29
+    major_column: 5
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 10
+    y: 34
+  11_29:
+    brush_index: 25
+    major_column: 5
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 11
+    y: 29
+  11_31:
+    brush_index: 25
+    major_column: 5
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 11
+    y: 31
+  11_32:
+    brush_index: 25
+    major_column: 5
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 11
+    y: 32
+  12_21:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 21
+  12_22:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 22
+  12_23:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 23
+  12_24:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 24
+  12_25:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 25
+  12_26:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 26
+  12_27:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 12
+    y: 27
+  12_28:
+    brush_index: 27
+    major_column: 6
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 12
+    y: 28
+  12_30:
+    brush_index: 29
+    major_column: 6
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 12
+    y: 30
+  12_33:
+    brush_index: 29
+    major_column: 6
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 12
+    y: 33
+  13_20:
+    brush_index: 25
+    major_column: 6
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 13
+    y: 20
+  13_28:
+    brush_index: 25
+    major_column: 6
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 13
+    y: 28
+  13_31:
+    brush_index: 25
+    major_column: 6
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 13
+    y: 31
+  14_21:
+    brush_index: 27
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 14
+    y: 21
+  14_22:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 14
+    y: 22
+  14_23:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 23
+  14_24:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 24
+  14_25:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 25
+  14_26:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 26
+  14_27:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 27
+  14_29:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 29
+  14_32:
+    brush_index: 29
+    major_column: 7
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 14
+    y: 32
+  14_33:
+    brush_index: 27
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 14
+    y: 33
+  14_34:
+    brush_index: 27
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 14
+    y: 34
+  14_35:
+    brush_index: 27
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 14
+    y: 35
+  15_20:
+    brush_index: 25
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 15
+    y: 20
+  15_21:
+    brush_index: 25
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 15
+    y: 21
+  15_28:
+    brush_index: 25
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 15
+    y: 28
+  15_31:
+    brush_index: 25
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 15
+    y: 31
+  15_33:
+    brush_index: 27
+    major_column: 7
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 15
+    y: 33
+  16_22:
+    brush_index: 27
+    major_column: 8
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 16
+    y: 22
+  16_29:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 29
+  16_32:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 32
+  16_33:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 33
+  16_34:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 34
+  16_35:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 35
+  16_36:
+    brush_index: 29
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 16
+    y: 36
+  17_19:
+    brush_index: 25
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 17
+    y: 19
+  17_20:
+    brush_index: 25
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 17
+    y: 20
+  17_21:
+    brush_index: 25
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 17
+    y: 21
+  17_27:
+    brush_index: 25
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 17
+    y: 27
+  17_29:
+    brush_index: 27
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 17
+    y: 29
+  17_30:
+    brush_index: 25
+    major_column: 8
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 17
+    y: 30
+  18_17:
+    brush_index: 27
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 18
+    y: 17
+  18_18:
+    brush_index: 27
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 18
+    y: 18
+  18_19:
+    brush_index: 27
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 18
+    y: 19
+  18_22:
+    brush_index: 27
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 18
+    y: 22
+  18_28:
+    brush_index: 29
+    major_column: 9
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 18
+    y: 28
+  18_29:
+    brush_index: 27
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 18
+    y: 29
+  18_31:
+    brush_index: 29
+    major_column: 9
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 18
+    y: 31
+  19_17:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 17
+  19_21:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 21
+  19_22:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 22
+  19_27:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 27
+  19_29:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 29
+  19_30:
+    brush_index: 25
+    major_column: 9
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 19
+    y: 30
+  1_-2:
+    brush_index: 17
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: -2
+  1_-6:
+    brush_index: 17
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: -6
+  1_-8:
+    brush_index: 17
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: -8
+  1_-9:
+    brush_index: 17
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: -9
+  1_2:
+    brush_index: 17
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: 2
+  1_31:
+    brush_index: 25
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: 31
+  1_33:
+    brush_index: 25
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: 33
+  1_34:
+    brush_index: 25
+    major_column: 0
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 1
+    y: 34
+  20_18:
+    brush_index: 27
+    major_column: 10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 20
+    y: 18
+  20_19:
+    brush_index: 29
+    major_column: 10
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 20
+    y: 19
+  20_20:
+    brush_index: 29
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 20
+    y: 20
+  20_23:
+    brush_index: 27
+    major_column: 10
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 20
+    y: 23
+  20_28:
+    brush_index: 29
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 20
+    y: 28
+  20_31:
+    brush_index: 29
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 20
+    y: 31
+  21_17:
+    brush_index: 25
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 21
+    y: 17
+  21_20:
+    brush_index: 29
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 21
+    y: 20
+  21_21:
+    brush_index: 25
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 21
+    y: 21
+  21_22:
+    brush_index: 25
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 21
+    y: 22
+  21_26:
+    brush_index: 25
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 21
+    y: 26
+  21_29:
+    brush_index: 25
+    major_column: 10
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 21
+    y: 29
+  22_16:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 22
+    y: 16
+  22_18:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 22
+    y: 18
+  22_19:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 22
+    y: 19
+  22_20:
+    brush_index: 29
+    major_column: 11
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 22
+    y: 20
+  22_23:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 22
+    y: 23
+  22_24:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 22
+    y: 24
+  22_27:
+    brush_index: 29
+    major_column: 11
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 22
+    y: 27
+  22_30:
+    brush_index: 29
+    major_column: 11
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 22
+    y: 30
+  23_16:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 16
+  23_18:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 18
+  23_21:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 23
+    y: 21
+  23_22:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 22
+  23_23:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 23
+  23_26:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 26
+  23_29:
+    brush_index: 25
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 23
+    y: 29
+  23_31:
+    brush_index: 27
+    major_column: 11
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 23
+    y: 31
+  24_17:
+    brush_index: 27
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 24
+    y: 17
+  24_19:
+    brush_index: 27
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 24
+    y: 19
+  24_20:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 24
+    y: 20
+  24_21:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 24
+    y: 21
+  24_24:
+    brush_index: 27
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 24
+    y: 24
+  24_25:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 24
+    y: 25
+  24_27:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 24
+    y: 27
+  24_30:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 24
+    y: 30
+  24_31:
+    brush_index: 27
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 24
+    y: 31
+  24_4:
+    brush_index: 27
+    major_column: 12
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 24
+    y: 4
+  25_16:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 25
+    y: 16
+  25_18:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 25
+    y: 18
+  25_21:
+    brush_index: 29
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 25
+    y: 21
+  25_22:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 25
+    y: 22
+  25_23:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 25
+    y: 23
+  25_25:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 25
+    y: 25
+  25_28:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 25
+    y: 28
+  25_3:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 25
+    y: 3
+  25_30:
+    brush_index: 25
+    major_column: 12
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 25
+    y: 30
+  26_17:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 17
+  26_19:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 19
+  26_24:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 24
+  26_25:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 25
+  26_26:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 26
+  26_27:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 27
+  26_28:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 28
+  26_29:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 29
+  26_30:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 30
+  26_31:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 31
+  26_32:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 32
+  26_33:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 33
+  26_34:
+    brush_index: 27
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 34
+  26_4:
+    brush_index: 26
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 26
+    y: 4
+  27_17:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 17
+  27_19:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 19
+  27_23:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 23
+  27_24:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 24
+  27_3:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 3
+  27_4:
+    brush_index: 25
+    major_column: 13
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 27
+    y: 4
+  28_13:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 13
+  28_14:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 14
+  28_15:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 15
+  28_16:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 16
+  28_18:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 18
+  28_20:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 20
+  28_21:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 21
+  28_22:
+    brush_index: 27
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 22
+  28_25:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 25
+  28_26:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 26
+  28_27:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 27
+  28_28:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 28
+  28_29:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 29
+  28_30:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 30
+  28_31:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 31
+  28_32:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 32
+  28_33:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 33
+  28_34:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 34
+  28_35:
+    brush_index: 29
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 28
+    y: 35
+  28_5:
+    brush_index: 26
+    major_column: 14
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 28
+    y: 5
+  29_12:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 12
+  29_17:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 17
+  29_19:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 19
+  29_2:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 2
+  29_23:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 23
+  29_3:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 3
+  29_4:
+    brush_index: 25
+    major_column: 14
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 29
+    y: 4
+  2_32:
+    brush_index: 29
+    major_column: 1
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 2
+    y: 32
+  2_35:
+    brush_index: 29
+    major_column: 1
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 2
+    y: 35
+  30_13:
+    brush_index: 27
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 30
+    y: 13
+  30_14:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 30
+    y: 14
+  30_15:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 15
+  30_16:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 16
+  30_18:
+    brush_index: 27
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 30
+    y: 18
+  30_20:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 20
+  30_21:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 21
+  30_22:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 22
+  30_24:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 24
+  30_27:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 30
+    y: 27
+  30_28:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 28
+  30_30:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 30
+    y: 30
+  30_31:
+    brush_index: 29
+    major_column: 15
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 30
+    y: 31
+  30_5:
+    brush_index: 26
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 30
+    y: 5
+  31_12:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 31
+    y: 12
+  31_13:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 13
+  31_17:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 17
+  31_18:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 18
+  31_2:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 2
+  31_23:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 23
+  31_27:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 27
+  31_3:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 3
+  31_30:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 30
+  31_4:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 4
+  31_5:
+    brush_index: 25
+    major_column: 15
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 31
+    y: 5
+  32_12:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 12
+  32_14:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 14
+  32_15:
+    brush_index: 29
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 32
+    y: 15
+  32_16:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 16
+  32_19:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 19
+  32_20:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 20
+  32_21:
+    brush_index: 27
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 21
+  32_22:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 32
+    y: 22
+  32_24:
+    brush_index: 29
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 32
+    y: 24
+  32_28:
+    brush_index: 29
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 32
+    y: 28
+  32_31:
+    brush_index: 29
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 32
+    y: 31
+  32_6:
+    brush_index: 26
+    major_column: 16
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 32
+    y: 6
+  33_1:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 1
+  33_11:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 11
+  33_13:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 13
+  33_15:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 15
+  33_17:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 17
+  33_18:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 18
+  33_2:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 2
+  33_22:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 22
+  33_26:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 26
+  33_29:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 29
+  33_3:
+    brush_index: 29
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 33
+    y: 3
+  33_4:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 4
+  33_5:
+    brush_index: 25
+    major_column: 16
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 33
+    y: 5
+  34_12:
+    brush_index: 27
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 34
+    y: 12
+  34_14:
+    brush_index: 27
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 34
+    y: 14
+  34_16:
+    brush_index: 27
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 34
+    y: 16
+  34_19:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 19
+  34_20:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 20
+  34_21:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 21
+  34_23:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 23
+  34_27:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 27
+  34_3:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 3
+  34_30:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 34
+    y: 30
+  34_6:
+    brush_index: 26
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 34
+    y: 6
+  35_1:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 1
+  35_11:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 35
+    y: 11
+  35_12:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 12
+  35_14:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 14
+  35_16:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 16
+  35_18:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 18
+  35_2:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 2
+  35_22:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 22
+  35_29:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 29
+  35_4:
+    brush_index: 29
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 35
+    y: 4
+  35_5:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 5
+  35_6:
+    brush_index: 25
+    major_column: 17
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 35
+    y: 6
+  36_10:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 10
+  36_11:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 11
+  36_13:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 13
+  36_15:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 15
+  36_17:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 17
+  36_19:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 19
+  36_20:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 36
+    y: 20
+  36_21:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 36
+    y: 21
+  36_23:
+    brush_index: 29
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 36
+    y: 23
+  36_24:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 24
+  36_25:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 25
+  36_26:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 26
+  36_27:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 27
+  36_28:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 28
+  36_3:
+    brush_index: 29
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 36
+    y: 3
+  36_30:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 30
+  36_4:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 4
+  36_7:
+    brush_index: 26
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 7
+  36_8:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 8
+  36_9:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 36
+    y: 9
+  37_0:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 0
+  37_1:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 1
+  37_12:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 12
+  37_14:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 14
+  37_16:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 37
+    y: 16
+  37_18:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 37
+    y: 18
+  37_20:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 20
+  37_21:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 21
+  37_23:
+    brush_index: 27
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 37
+    y: 23
+  37_29:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 29
+  37_3:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 3
+  37_5:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 5
+  37_6:
+    brush_index: 25
+    major_column: 18
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 37
+    y: 6
+  38_10:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 10
+  38_11:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 11
+  38_13:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 13
+  38_15:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 15
+  38_16:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 16
+  38_17:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 17
+  38_18:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 18
+  38_19:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 19
+  38_2:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 2
+  38_22:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 22
+  38_23:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 23
+  38_24:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 24
+  38_25:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 25
+  38_26:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 26
+  38_27:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 27
+  38_28:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 28
+  38_30:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 30
+  38_4:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 38
+    y: 4
+  38_7:
+    brush_index: 26
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 7
+  38_8:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 8
+  38_9:
+    brush_index: 27
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 38
+    y: 9
+  39_0:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 0
+  39_1:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 1
+  39_13:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 13
+  39_15:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 15
+  39_2:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 2
+  39_21:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 21
+  39_29:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 29
+  39_5:
+    brush_index: 29
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: TL
+    x: 39
+    y: 5
+  39_6:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 6
+  39_7:
+    brush_index: 25
+    major_column: 19
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 39
+    y: 7
+  3_-3:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: -3
+  3_-5:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: -5
+  3_-7:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: -7
+  3_-9:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: -9
+  3_0:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: 0
+  3_2:
+    brush_index: 17
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: 2
+  3_31:
+    brush_index: 25
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: 31
+  3_34:
+    brush_index: 25
+    major_column: 1
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 3
+    y: 34
+  40_10:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 10
+  40_11:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 11
+  40_12:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 12
+  40_14:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 14
+  40_22:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 22
+  40_23:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 23
+  40_24:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 24
+  40_25:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 25
+  40_26:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 26
+  40_27:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 27
+  40_28:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 28
+  40_3:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 3
+  40_30:
+    brush_index: 27
+    major_column: 20
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 40
+    y: 30
+  40_4:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 4
+  40_5:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 5
+  40_8:
+    brush_index: 28
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 8
+  40_9:
+    brush_index: 29
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 40
+    y: 9
+  41_0:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 0
+  41_1:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 1
+  41_12:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 12
+  41_14:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 14
+  41_21:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 21
+  41_29:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 29
+  41_5:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 5
+  41_6:
+    brush_index: 25
+    major_column: 20
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 41
+    y: 6
+  42_10:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 10
+  42_11:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 11
+  42_13:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 13
+  42_2:
+    brush_index: 27
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 42
+    y: 2
+  42_22:
+    brush_index: 27
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 42
+    y: 22
+  42_23:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 42
+    y: 23
+  42_24:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 24
+  42_25:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 25
+  42_26:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 26
+  42_27:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 27
+  42_28:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 28
+  42_3:
+    brush_index: 27
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 42
+    y: 3
+  42_30:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 30
+  42_4:
+    brush_index: 27
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 42
+    y: 4
+  42_7:
+    brush_index: 28
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 7
+  42_8:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 8
+  42_9:
+    brush_index: 29
+    major_column: 21
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 42
+    y: 9
+  43_1:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 1
+  43_12:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 12
+  43_14:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 14
+  43_2:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 2
+  43_22:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 22
+  43_29:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 29
+  43_5:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 5
+  43_6:
+    brush_index: 25
+    major_column: 21
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 43
+    y: 6
+  44_11:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 44
+    y: 11
+  44_13:
+    brush_index: 29
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 44
+    y: 13
+  44_23:
+    brush_index: 27
+    major_column: 22
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 44
+    y: 23
+  44_3:
+    brush_index: 27
+    major_column: 22
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 44
+    y: 3
+  44_30:
+    brush_index: 27
+    major_column: 22
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 44
+    y: 30
+  44_4:
+    brush_index: 27
+    major_column: 22
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 44
+    y: 4
+  44_7:
+    brush_index: 28
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 44
+    y: 7
+  45_1:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 1
+  45_11:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 11
+  45_13:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 13
+  45_2:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 2
+  45_22:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 22
+  45_29:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 29
+  45_4:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 4
+  45_5:
+    brush_index: 25
+    major_column: 22
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 45
+    y: 5
+  46_12:
+    brush_index: 29
+    major_column: 23
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 46
+    y: 12
+  46_23:
+    brush_index: 27
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 46
+    y: 23
+  46_3:
+    brush_index: 27
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: TR
+    x: 46
+    y: 3
+  46_30:
+    brush_index: 27
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 46
+    y: 30
+  46_6:
+    brush_index: 28
+    major_column: 23
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 46
+    y: 6
+  47_13:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 13
+  47_2:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 2
+  47_23:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 23
+  47_3:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 3
+  47_30:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 30
+  47_4:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 4
+  47_5:
+    brush_index: 25
+    major_column: 23
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 47
+    y: 5
+  48_12:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 48
+    y: 12
+  48_24:
+    brush_index: 27
+    major_column: 24
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 48
+    y: 24
+  48_31:
+    brush_index: 27
+    major_column: 24
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 48
+    y: 31
+  48_6:
+    brush_index: 28
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 48
+    y: 6
+  49_12:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 49
+    y: 12
+  49_2:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 49
+    y: 2
+  49_23:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 49
+    y: 23
+  49_3:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 49
+    y: 3
+  49_30:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 49
+    y: 30
+  49_4:
+    brush_index: 25
+    major_column: 24
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 49
+    y: 4
+  4_32:
+    brush_index: 29
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 4
+    y: 32
+  4_35:
+    brush_index: 29
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 4
+    y: 35
+  4_36:
+    brush_index: 27
+    major_column: 2
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 4
+    y: 36
+  4_37:
+    brush_index: 27
+    major_column: 2
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 4
+    y: 37
+  4_38:
+    brush_index: 27
+    major_column: 2
+    offsets:
+    - 0
+    - 0
+    shape: L
+    x: 4
+    y: 38
+  50_24:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 24
+  50_25:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 25
+  50_26:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 26
+  50_27:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 27
+  50_28:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 28
+  50_29:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 29
+  50_30:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 30
+  50_31:
+    brush_index: 27
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: L
+    x: 50
+    y: 31
+  50_5:
+    brush_index: 28
+    major_column: 25
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 50
+    y: 5
+  51_24:
+    brush_index: 25
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 51
+    y: 24
+  51_3:
+    brush_index: 25
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 51
+    y: 3
+  51_4:
+    brush_index: 25
+    major_column: 25
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 51
+    y: 4
+  52_25:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 25
+  52_26:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 26
+  52_27:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 27
+  52_28:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 28
+  52_29:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 29
+  52_30:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 30
+  52_31:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 31
+  52_32:
+    brush_index: 29
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 32
+  52_5:
+    brush_index: 28
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 52
+    y: 5
+  53_23:
+    brush_index: 25
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 53
+    y: 23
+  53_3:
+    brush_index: 25
+    major_column: 26
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 53
+    y: 3
+  54_24:
+    brush_index: 29
+    major_column: 27
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 54
+    y: 24
+  54_4:
+    brush_index: 28
+    major_column: 27
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 54
+    y: 4
+  55_23:
+    brush_index: 25
+    major_column: 27
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 55
+    y: 23
+  56_24:
+    brush_index: 29
+    major_column: 28
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 56
+    y: 24
+  57_22:
+    brush_index: 25
+    major_column: 28
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 57
+    y: 22
+  58_23:
+    brush_index: 29
+    major_column: 29
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 58
+    y: 23
+  5_-5:
+    brush_index: 17
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: -5
+  5_-7:
+    brush_index: 17
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: -7
+  5_0:
+    brush_index: 17
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: 0
+  5_1:
+    brush_index: 17
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: 1
+  5_30:
+    brush_index: 25
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: 30
+  5_33:
+    brush_index: 25
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 5
+    y: 33
+  5_35:
+    brush_index: 27
+    major_column: 2
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 5
+    y: 35
+  60_23:
+    brush_index: 29
+    major_column: 30
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 60
+    y: 23
+  6_31:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 31
+  6_34:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 34
+  6_35:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 35
+  6_36:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 36
+  6_37:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 37
+  6_38:
+    brush_index: 29
+    major_column: 3
+    offsets:
+    - 0
+    - 3
+    shape: R
+    x: 6
+    y: 38
+  7_-4:
+    brush_index: 17
+    major_column: 3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 7
+    y: -4
+  7_1:
+    brush_index: 17
+    major_column: 3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 7
+    y: 1
+  7_30:
+    brush_index: 25
+    major_column: 3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 7
+    y: 30
+  7_33:
+    brush_index: 25
+    major_column: 3
+    offsets:
+    - 0
+    - 1
+    shape: T
+    x: 7
+    y: 33
+  8_31:
+    brush_index: 29
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 8
+    y: 31
+  8_32:
+    brush_index: 27
+    major_column: 4
+    offsets:
+    - 0
+    - 0
+    shape: TR
+    x: 8
+    y: 32
+  8_34:
+    brush_index: 29
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: R
+    x: 8
+    y: 34
+  9_-8:
+    brush_index: 17
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 9
+    y: -8
+  9_29:
+    brush_index: 25
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 9
+    y: 29
+  9_31:
+    brush_index: 27
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 9
+    y: 31
+  9_32:
+    brush_index: 25
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: T
+    x: 9
+    y: 32
+  9_34:
+    brush_index: 27
+    major_column: 4
+    offsets:
+    - 0
+    - 2
+    shape: TL
+    x: 9
+    y: 34
+tile_line_rgb: '#828282'
