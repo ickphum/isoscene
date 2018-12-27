@@ -1879,13 +1879,13 @@ sub mouse_event_handler { #{{{1
 
         # to undo, all we need is the old position; the new position is taken from the current settings
         if ($app->config->undo_includes_view) {
-            $log->info("add view undo");
+#            $log->info("add view undo");
             $self->add_undo_action($IsoFrame::AC_VIEW, { scale => $self->scene->scale, x => $self->scene->origin_x, y => $self->scene->origin_y });
         }
 
         $self->move_origin($device_x, $device_y);
 
-        $log->info("drag at $logical_x, $logical_y, origin now " . $self->scene->origin_x . ',' . $self->scene->origin_y);
+#        $log->info("drag at $logical_x, $logical_y, origin now " . $self->scene->origin_x . ',' . $self->scene->origin_y);
 
         $self->calculate_grid_points;
         $refresh = 1;
@@ -3003,7 +3003,7 @@ sub add_undo_action { #{{{1
         push @{ $self->scene->undo_stack }, $new_action;
     }
 
-    $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
+#    $log->info("undo, redo : " . Dumper($self->scene->undo_stack, $self->scene->redo_stack));
 
     $self->set_undo_redo_button_states;
 
@@ -3045,7 +3045,7 @@ sub undo_or_redo { #{{{1
         }
 
         if ((ref $next_action) eq 'HASH') {
-            $log->info("view action " . Dumper($next_action));
+#            $log->info("view action " . Dumper($next_action));
 
             # view actions don't have erase/paint pairs; the alternate values come from
             # the current settings. 
