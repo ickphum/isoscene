@@ -571,39 +571,46 @@ File structure
                 elsif (exists $item->{scale}) {
                     $log->debug("found a view item" . Dumper($item));
 
-                    # view items must encode scale and device origin x&y. Panning doesn't change
-                    # scale but zooming does change origin, so we use a common format for both.
-                    # Keep the top bit clear to distinguish these from normal items (as for choices)
-                    # but then we need to distinguish from choices, which currently have the whole top
-                    # byte clear. Scale ranges from 0.25 to 32; we'll * by 4 & subtract 1 to get 0-127,
-                    # ie 7 bits.
-                    # From the top byte down:
-                    # 0 - clear so not a normal item
-                    # 1 - set so not a choice item
-                    # 2 - set if either origin needs more than 11 bits
-                    # 3-9 - scale
-                    # 10-20 - 11 bits for x origin; 0 - 2047, so store origin + 1024.
-                    # 21-31 - 11 bits for y origin
-                    my $scale_code = $item->{scale} * 4 - 1;
-                    my $x_code = $item->{x} + 2 ** 10;
-                    my $y_code = $item->{y} + 2 ** 10;
-                    my $view_code = ($x_code > 0 && $x_code < 2 ** 11 && $y_code > 0 && $y_code < 2 ** 11)
-                        ? 2 << 29   # 010; 01 = view item, 0 = view item contains origin
-                            | $scale_code << 22
-                            | $x_code << 11
-                            | $y_code
-                        : 3 << 29   # 011; 01 = view item, 1 = origin follows in next word (2x16 bits)
-                            | $scale_code << 22;
-                    $log->info(sprintf("write view %032b at ", $view_code) . (tell $fh)) if $debugging;
-                    print { $fh } pack('L', $view_code);
-
-                    # if either origin is outside the range -1024 - 1023, we have to
-                    # write them as 16 bit values, giving us -32767 - 32768.
-                    if ($view_code & 0x20000000) {
-                        my $origin_code = ($item->{x} + 2 ** 15) << 16 | ($item->{y} + 2 ** 15);
-                        $log->info(sprintf("write origin code %032b at ", $origin_code) . (tell $fh)) if $debugging;
-                        print { $fh } pack('L', $origin_code);
+                    if ($write_tiles) {
+                        $log->debug("skip view item this pass");
                     }
+                    else {
+
+                        # view items must encode scale and device origin x&y. Panning doesn't change
+                        # scale but zooming does change origin, so we use a common format for both.
+                        # Keep the top bit clear to distinguish these from normal items (as for choices)
+                        # but then we need to distinguish from choices, which currently have the whole top
+                        # byte clear. Scale ranges from 0.25 to 32; we'll * by 4 & subtract 1 to get 0-127,
+                        # ie 7 bits.
+                        # From the top byte down:
+                        # 0 - clear so not a normal item
+                        # 1 - set so not a choice item
+                        # 2 - set if either origin needs more than 11 bits
+                        # 3-9 - scale
+                        # 10-20 - 11 bits for x origin; 0 - 2047, so store origin + 1024.
+                        # 21-31 - 11 bits for y origin
+                        my $scale_code = $item->{scale} * 4 - 1;
+                        my $x_code = $item->{x} + 2 ** 10;
+                        my $y_code = $item->{y} + 2 ** 10;
+                        my $view_code = ($x_code > 0 && $x_code < 2 ** 11 && $y_code > 0 && $y_code < 2 ** 11)
+                            ? 2 << 29   # 010; 01 = view item, 0 = view item contains origin
+                                | $scale_code << 22
+                                | $x_code << 11
+                                | $y_code
+                            : 3 << 29   # 011; 01 = view item, 1 = origin follows in next word (2x16 bits)
+                                | $scale_code << 22;
+                        $log->info(sprintf("write view %032b at ", $view_code) . (tell $fh)) if $debugging;
+                        print { $fh } pack('L', $view_code);
+
+                        # if either origin is outside the range -1024 - 1023, we have to
+                        # write them as 16 bit values, giving us -32767 - 32768.
+                        if ($view_code & 0x20000000) {
+                            my $origin_code = ($item->{x} + 2 ** 15) << 16 | ($item->{y} + 2 ** 15);
+                            $log->info(sprintf("write origin code %032b at ", $origin_code) . (tell $fh)) if $debugging;
+                            print { $fh } pack('L', $origin_code);
+                        }
+                    }
+
                 }
                 else {
                     $log->logdie("found a hash in a stack but it's not a choice or a view : " . Dumper($item));
@@ -885,7 +892,7 @@ sub load_binary_file { #{{{1
                 $item->{y} = ($item_code & 0x000007FF) - 2 ** 10;
             }
 
-            $log->info("read view code, item: " . Dumper($item));
+#            $log->info("read view code, item: " . Dumper($item));
             push @{ $stack }, $item;
         }
 

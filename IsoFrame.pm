@@ -1025,6 +1025,7 @@ sub save_to_file { #{{{1
     my ($self) = @_;
 
     my $scene = wxTheApp->scene;
+    my $config = wxTheApp->config;
 
     # save to previous file saved or loaded w/o prompting.
     unless ($scene->filename) {
@@ -1032,12 +1033,12 @@ sub save_to_file { #{{{1
             'Save Scene to file',
             '',
             '',
-            'IsoScene files (*.isz;*.isc)|*.isz;*.isc',
+            'IsoScene files (*.isb;*.isz;*.isc)|*.isb;*.isz;*.isc',
             wxFD_SAVE);
 
         return 0 if $dialog->ShowModal == wxID_CANCEL;
         return 0 unless my $file = ($dialog->GetPaths)[0];
-        $file = File::Basename::basename($file, '.isz');
+        $file = File::Basename::basename($file, $config->use_binary_files ? '.isb' : '.isz');
         $scene->filename($file);
     }
 
