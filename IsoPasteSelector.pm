@@ -41,6 +41,7 @@ sub new { #{{{1
     my $self = $class->SUPER::new( $parent, -1, "Select Item To Paste", $pos, [ 300, 600 ], wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER);
 
     my $app = wxTheApp;
+    my $config = $app->config;
 
     $self->SetSizer(my $dialog_sizer = Wx::BoxSizer->new(wxVERTICAL));
 
@@ -70,7 +71,7 @@ sub new { #{{{1
             next if $scene eq $this_scene_name;
 
             unless ($other_scene{$scene}) {
-                if (-f "$scene.isb") {
+                if (-f File::Spec->catfile($config->{scene_dir}, "$scene.isb")) {
 
                     # create the other_scene entry 
                     $other_scene{$scene} = {

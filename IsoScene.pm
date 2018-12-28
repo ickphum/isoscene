@@ -102,6 +102,9 @@ sub new { # {{{1
     $log->debug("new IsoScene : " . Dumper($arg));
 
     my $config = wxTheApp->config;
+    
+#    $arg->{file} ||= $config->default_scene_file;
+
     if ($arg->{file} && $arg->{file} !~ /\./) {
         $arg->{file} .= $config->use_binary_files
             ? '.isb'
@@ -137,6 +140,13 @@ sub new { # {{{1
 
     my $scene;
     my $extension;
+
+    # use the configured scene dir unless an absolute name was used
+    if ($arg->{file} && ! File::Spec->file_name_is_absolute($arg->{file})) {
+        $arg->{file} = File::Spec->catfile($config->{scene_dir}, $arg->{file});
+        $log->info("Used scene dir, arg->{file} is $arg->{file}");
+    }
+
     if ($arg->{file} && -f $arg->{file}) {
 
         # we assigned default extensions above, now respect whatever extension we find; you should
@@ -152,7 +162,7 @@ sub new { # {{{1
 
         my $unzipped_yaml;
         if ($extension =~ /\Ais[cz]\z/) {
-            if ($arg->{file} eq 'isz') {
+            if ($extension eq 'isz') {
                 $log->info("load compressed file $arg->{file}");
                 unless (unzip $arg->{file} => \$unzipped_yaml) {
                     $log->logdie("Error during uncompression of $arg->{file} : $UnzipError");
@@ -167,7 +177,7 @@ sub new { # {{{1
         }
         else {
             $log->info("load binary file $arg->{file}");
-            $scene = load_binary_file($arg->{file}) || $default_scene; 
+            $scene = load_binary_file($arg->{file}) || $default_scene;
         }
 
         # Note that if $scene was loaded from YAML it will already be an IsoScene object,
@@ -285,10 +295,10 @@ sub save { #{{{1
     $config ||= wxTheApp->config;
 
     if ($config->{use_binary_files}) {
-        $self->save_binary;
+        $self->save_binary($config);
     }
     else {
-        $self->save_yaml;
+        $self->save_yaml($config);
     }
 
     # we don't update the last filename for an autosave
@@ -301,7 +311,7 @@ sub save { #{{{1
 
 ################################################################################
 sub save_binary { #{{{1
-    my ($self) = @_;
+    my ($self, $config) = @_;
 
 =for comment
 
@@ -347,7 +357,7 @@ File structure
 =cut
 
     my $filename = $self->{filename} . '.isb';
-    open (my $fh, '>', $filename)
+    open (my $fh, '>', File::Spec->catfile($config->{scene_dir}, $filename))
         or $log->logdie("can't write file $filename: $OS_ERROR");
 
     # set the file version; for now, always write the highest version
@@ -667,7 +677,7 @@ File structure
 
 ################################################################################
 sub save_yaml { #{{{1
-    my ($self) = @_;
+    my ($self, $config) = @_;
 
     my $yaml_scene = Dump($self);
 
@@ -680,7 +690,7 @@ sub save_yaml { #{{{1
 #    }
 #    else {
         $log->info("write standard YAML file");
-        write_file($self->{filename} . '.isc', $yaml_scene);
+        write_file(File::Spec->catfile($config->{scene_dir}, $self->{filename} . '.isc'), $yaml_scene);
         $log->debug("saved to " . $self->{filename} . '.isc');
         $log->info("done");
 #    }
@@ -1066,7 +1076,7 @@ sub read_clipboard_item { #{{{1
 
     $log->info("scene_name $scene_name, clipboard_item_name $clipboard_item_name");
 
-    my $filename = "$scene_name.isb";
+    my $filename = File::Spec->catfile(wxTheApp->config->{scene_dir}, "$scene_name.isb");
 
     # Should have been trapped in the paste dialog?
     return undef, "Scene file '$filename' doesn't exist." unless -f $filename;
@@ -1074,7 +1084,7 @@ sub read_clipboard_item { #{{{1
     open (my $fh, '<', $filename)
         or return undef, "can't read file $filename: $OS_ERROR";
 
-    my $debugging = $log->debug("load_binary_file; detailed debugging is on.");
+    my $debugging = $log->debug("read_clipboard_item; detailed debugging is on.");
 
     # read version byte
     my ($version) = read_and_unpack($fh, 'C', 1) or return;

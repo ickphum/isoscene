@@ -41,7 +41,7 @@ sub new { # {{{1
         select tick_L tick_T tick_R tick_TL tick_TR
         copy cut paste selection_tools select_all select_none select_visible
         small_paste small_cube);
-    for my $image_name (qw(move area_L area_T area_R flood)) {
+    for my $image_name (qw(move area flood)) {
         push @images, "${image_name}_on", "${image_name}_off";
     }
     for my $action (grep { $_ !~ /$IsoFrame::AC_IMPORT|$IsoFrame::AC_PASTE|$IsoFrame::AC_CHOOSE_BRANCH|$IsoFrame::AC_VIEW/ } @IsoFrame::ACTIONS) {

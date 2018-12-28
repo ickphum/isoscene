@@ -43,6 +43,7 @@ __PACKAGE__->mk_accessors( qw(
     default_scene_background_rgb
     default_scene_bg_line_rgb
     default_scene_tile_line_rgb
+    scene_dir
 ));
 
 ################################################################################
@@ -78,6 +79,7 @@ sub new { # {{{1
         default_scene_background_rgb => '#AAAAAA',
         default_scene_bg_line_rgb => '#B3B3B3',
         default_scene_tile_line_rgb => '#DDDDDD',
+        scene_dir => './Scene',
     };
 
     my $config;

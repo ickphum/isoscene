@@ -234,7 +234,7 @@ sub new { #{{{1
     Wx::Event::EVT_BUTTON($self, $move_btn, sub { $_[0]->change_mode($MO_MOVE); });
     push @column_buttons, $move_btn;
 
-    my $area_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{area_R_off});
+    my $area_btn = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{area_off});
     $area_btn->SetToolTip("Use Area");
     $self->mode_btn->{$MO_AREA} = $area_btn;
     Wx::Event::EVT_BUTTON($self, $area_btn, sub { $_[0]->change_mode($MO_AREA); });
@@ -729,11 +729,11 @@ sub change_mode { #{{{1
         $self->pan_mode($flag = ($self->pan_mode ? 0 : 1));
     }
 
-    my $image_stub = $button_mode eq $MO_AREA
-        ? "area_" . $self->current_side
-        : $button_mode;
-    $log->debug("image_stub $image_stub");
-    IsoApp::set_button_bitmap($self->mode_btn->{$button_mode}, $flag ? "${image_stub}_on" : "${image_stub}_off");
+#    my $image_stub = $button_mode eq $MO_AREA
+#        ? "area_" . $self->current_side
+#        : $button_mode;
+#    $log->debug("image_stub $image_stub");
+    IsoApp::set_button_bitmap($self->mode_btn->{$button_mode}, $flag ? "${button_mode}_on" : "${button_mode}_off");
     $self->mode_btn->{$button_mode}->Refresh;
 
     $self->canvas->set_cursor;
@@ -940,8 +940,8 @@ sub current_side { #{{{1
         $self->_current_side($side);
 
         # switch the image on the area button
-        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->area_mode ? "area_${side}_on" : "area_${side}_off");
-        $self->mode_btn->{$MO_AREA}->Refresh;
+#        IsoApp::set_button_bitmap($self->mode_btn->{$MO_AREA}, $self->area_mode ? "area_${side}_on" : "area_${side}_off");
+#        $self->mode_btn->{$MO_AREA}->Refresh;
 
         # switch the images on the action buttons
         for my $action ($AC_PAINT, $AC_SAMPLE, $AC_LIGHTEN, $AC_DARKEN, $AC_SHADE, $AC_SHADE_CUBE) {
@@ -1031,7 +1031,7 @@ sub save_to_file { #{{{1
     unless ($scene->filename) {
         my $dialog = Wx::FileDialog->new( $self,
             'Save Scene to file',
-            '',
+            $config->{scene_dir},
             '',
             'IsoScene files (*.isb;*.isz;*.isc)|*.isb;*.isz;*.isc',
             wxFD_SAVE);
@@ -1054,9 +1054,10 @@ sub open_from_file { #{{{1
     my ($self, $file) = @_;
 
     unless ($file) {
+        my $config = wxTheApp->config;
         my $dialog = Wx::FileDialog->new( $self,
             'Open Scene from file',
-            '',
+            $config->{scene_dir},
             '',
             'IsoScene files (*.isb;*.isz;*.isc)|*.isb;*.isz;*.isc',
             wxFD_OPEN);
