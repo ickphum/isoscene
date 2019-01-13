@@ -259,7 +259,11 @@ sub new { #{{{1
 
     my $button = $self->misc_btn->{selection_tools} = Wx::BitmapButton->new($tool_panel, -1, $bitmap->{selection_tools} );
     $button->SetToolTip("Selection Tools");
-    Wx::Event::EVT_BUTTON($self, $button, sub { $self->show_button_popup([ qw(select_all select_none select_visible) ], \&do_selection_tool, $button->GetScreenPosition); });
+    Wx::Event::EVT_BUTTON($self, $button, sub {
+        $self->show_button_popup(
+            [ qw(select_all select_none select_visible), "select_by_color_" . $self->canvas->select_by_color ],
+            \&do_selection_tool, $button->GetScreenPosition);
+    });
     push @column_buttons, $button;
 
     my $column_button_szr = Wx::FlexGridSizer->new(0,2,0,0);
@@ -1516,6 +1520,9 @@ sub do_selection_tool { #{{{1
     }
     elsif ($button_name eq 'select_visible') {
         $frame->canvas->select_visible;
+    }
+    elsif ($button_name =~ 'select_by_color_') {
+        $frame->canvas->select_by_color($frame->canvas->select_by_color ? 0 : 1);
     }
 
     return;

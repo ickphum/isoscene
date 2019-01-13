@@ -39,7 +39,7 @@ sub new { # {{{1
         undo undo_many redo redo_many undo_redo_menu branch_redo 
             redo_to_branch undo_to_branch choose_branch new_branch clear_undo_info
         select tick_L tick_T tick_R tick_TL tick_TR
-        copy cut paste selection_tools select_all select_none select_visible
+        copy cut paste selection_tools select_all select_none select_visible select_by_color_0 select_by_color_1
         small_paste small_cube);
     for my $image_name (qw(move area flood)) {
         push @images, "${image_name}_on", "${image_name}_off";

@@ -36,11 +36,15 @@ previous_scene_files:
 - House
 - Hamish Monster
 - Hamish
-- Start
+- hamish2001
+- LIne
+- Line
 - Freshwater
+- Start
+- Thurso
 relative_shades: L,1,T,0,R,2
 repaint_same_tile: 0
-repeated_pasting: 1
+repeated_pasting: 0
 save_compressed_files: 0
 scene_dir: /home/ikm/Dropbox/IsoScenes
 script_delay_milliseconds: 50

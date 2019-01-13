@@ -34,7 +34,7 @@ __PACKAGE__->mk_accessors(qw(frame dragging last_device_x last_device_y
     background_color bg_line_color 
     floodfill
     current_location current_grid_key
-    area_start area_tiles select_toggle 
+    area_start area_tiles select_toggle select_by_color
     
     transient_key 
 
@@ -327,6 +327,8 @@ sub new { #{{{1
 #    die "unable to allocate VBOs\n" if (!scalar(@vbo) || !$vbo[0]);
 #    $self->tile_va->bind(1);
 #    glBufferDataARB_p(GL_ARRAY_BUFFER_ARB, $self->tile_va, GL_STATIC_DRAW_ARB);
+
+    $self->select_by_color(0);
 
     return $self;
 }
@@ -954,9 +956,12 @@ sub Render { # {{{1
         }
     }
 
-    # draw the current target
-    glColor4ub(0xff, 0x00, 0x00, 0x3f);
-    $self->display_render_group('target');
+    unless ($render_to_image) {
+
+        # draw the current target
+        glColor4ub(0xff, 0x00, 0x00, 0x3f);
+        $self->display_render_group('target');
+    }
 
     glDisableClientState(GL_VERTEX_ARRAY);
 
@@ -1718,6 +1723,17 @@ sub mouse_event_handler { #{{{1
             }
         }
 
+        my %side_brush_index;
+        if ($action =~ /erase|select/ && $self->select_by_color) {
+
+            # if we're selecting or deleting and need to match on current color, we need the brush indexes for each 
+            # side of the cube.
+            for my $side (qw( L T R )) {
+                $side_brush_index{$side} = $self->get_palette_index($frame->cube_brush->{$side}->GetColour->GetAsString(wxC2S_HTML_SYNTAX));
+            }
+
+        }
+
         if ($action eq $IsoFrame::AC_PAINT) {
 
             if ($self->area_start) {
@@ -1751,10 +1767,22 @@ sub mouse_event_handler { #{{{1
                 if (my $tile = $self->find_tile($grid_key)) {
 #                    $log->debug("found tile " . Dumper($tile));
 
-                    if ($action eq $IsoFrame::AC_ERASE_ALL
-                        || $tile->{shape} =~ /T[LR]/
-                        || ($action eq $IsoFrame::AC_ERASE && $tile->{shape} eq $paint_shape)
-                        || ($action eq $IsoFrame::AC_ERASE_OTHERS && $tile->{shape} ne $paint_shape))
+                    if (
+                        ($action eq $IsoFrame::AC_ERASE_ALL
+                            || $tile->{shape} =~ /T[LR]/
+                            || ($action eq $IsoFrame::AC_ERASE && $tile->{shape} eq $paint_shape)
+                            || ($action eq $IsoFrame::AC_ERASE_OTHERS && $tile->{shape} ne $paint_shape))
+
+                        # ? Checking for existence of side_brush_index is a cheap test for 
+                        # whether the tile is a regular shape (in which case we test for that shape's brush) 
+                        # or a triangle, in which case we test for any current brush; can't tell which shape
+                        # a triangle is part of.
+                        && (! $self->select_by_color ||
+                            (exists $side_brush_index{ $tile->{shape} } 
+                                ? $tile->{brush_index} == $side_brush_index{ $tile->{shape} }
+                                : scalar grep { $tile->{brush_index} == $side_brush_index{$_} } map qw(L T R))
+                        )
+                    )
                     {
 
                         # the tile we delete will not have the same grid_key that we 
@@ -1783,10 +1811,19 @@ sub mouse_event_handler { #{{{1
             }
             elsif (my $tile = $self->find_tile($grid_key)) {
 #                $log->debug("tile: " . Dumper($tile));
-                if ($action eq $IsoFrame::AC_SELECT_ALL
-                    || $tile->{shape} =~ /T[LR]/
-                    || ($action eq $IsoFrame::AC_SELECT && $tile->{shape} eq $paint_shape)
-                    || ($action eq $IsoFrame::AC_SELECT_OTHERS && $tile->{shape} ne $paint_shape))
+                if (
+                    ($action eq $IsoFrame::AC_SELECT_ALL
+                        || $tile->{shape} =~ /T[LR]/
+                        || ($action eq $IsoFrame::AC_SELECT && $tile->{shape} eq $paint_shape)
+                        || ($action eq $IsoFrame::AC_SELECT_OTHERS && $tile->{shape} ne $paint_shape))
+
+                    # color matching; see delete action above
+                    && (! $self->select_by_color ||
+                        (exists $side_brush_index{ $tile->{shape} } 
+                            ? $tile->{brush_index} == $side_brush_index{ $tile->{shape} }
+                            : scalar grep { $tile->{brush_index} == $side_brush_index{$_} } map qw(L T R))
+                    )
+                )
                 {
                     $tile->{selected} = $self->select_toggle;
 
@@ -1892,6 +1929,7 @@ sub mouse_event_handler { #{{{1
     }
 
     $self->Refresh if $refresh;
+#    wxTheApp->set_frame_title($grid_key) if $refresh;
 
     $self->last_device_x($device_x);
     $self->last_device_y($device_y);
@@ -2036,10 +2074,20 @@ sub mark_area { #{{{1
     my $other_facing = $facing eq 'L' ? 'R' : 'L';
     my $triangle_shift = $shape_triangle_shift->{ $shape }->{ $facing };
 
-    my $action = $self->frame->action;
+    my $frame = $self->frame;
+    my $action = $frame->action;
     my $sector = $self->sector;
 
     wxTheApp->set_frame_title(($maxes[0] - $mins[0] + 1) . "x" . ($maxes[1] - $mins[1] + 1));
+
+    # if we're selecting or deleting and need to match on current color, we need the brush indexes for each 
+    # side of the cube.
+    my %side_brush_index;
+    for my $side (qw( L T R )) {
+        $side_brush_index{$side} = $self->get_palette_index($frame->cube_brush->{$side}->GetColour->GetAsString(wxC2S_HTML_SYNTAX));
+    }
+
+    my $color_match = $self->select_by_color;
 
     my @point;
     for my $coord_0 ($mins[0] .. $maxes[0]) {
@@ -2063,10 +2111,26 @@ sub mark_area { #{{{1
                 my $grid_key = "${facing}_$point[0]_$point[1]_$point[2]";
                 if (my $tile = $self->find_tile ( $grid_key )) {
 
-                    # select according to action mode and shape
-                    if (($action eq $IsoFrame::AC_ERASE_ALL || $action eq $IsoFrame::AC_SELECT_ALL)
-                        || (($action eq $IsoFrame::AC_ERASE || $action eq $IsoFrame::AC_SELECT) && $tile->{shape} eq $shape)
-                        || (($action eq $IsoFrame::AC_ERASE_OTHERS || $action eq $IsoFrame::AC_SELECT_OTHERS) && $tile->{shape} ne $shape))
+                    if (
+
+                        # select according to action mode and shape
+                        (
+                            ($action eq $IsoFrame::AC_ERASE_ALL || $action eq $IsoFrame::AC_SELECT_ALL)
+                            || (($action eq $IsoFrame::AC_ERASE || $action eq $IsoFrame::AC_SELECT) && $tile->{shape} eq $shape)
+                            || (($action eq $IsoFrame::AC_ERASE_OTHERS || $action eq $IsoFrame::AC_SELECT_OTHERS) && $tile->{shape} ne $shape)
+                        )
+
+                        # color matching? Checking for existence of side_brush_index is a cheap test for 
+                        # whether the tile is a regular shape (in which case we test for that shape's brush) 
+                        # or a triangle, in which case we test for any current brush; can't tell which shape
+                        # a triangle is part of.
+                        && (! $color_match || 
+                            (exists $side_brush_index{ $tile->{shape} } 
+                                ? $tile->{brush_index} == $side_brush_index{ $tile->{shape} }
+                                : scalar grep { $tile->{brush_index} == $side_brush_index{$_} } map qw(L T R))
+                        )
+
+                    )
                     {
 
                         # mark this tile for the next refresh; the final set of marked tiles, ie
@@ -2089,10 +2153,17 @@ sub mark_area { #{{{1
                     # other facing, which isn't being done by find_tile because you need to
                     # know the current shape to know where to extend the search.
                     my @tpoint = ($point[0] + $triangle_shift->[0], $point[1] + $triangle_shift->[1], $point[2] + $triangle_shift->[2]);
-                    my $grid_key = "${other_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
+                    $grid_key = "${other_facing}_$tpoint[0]_$tpoint[1]_$tpoint[2]";
                     $log->debug("check triangle key $grid_key");
                     if (my $tile = $self->find_tile ( $grid_key )) {
-                        if ($tile->{shape} =~ /T[LR]/) {
+                        $log->info("found other shape tile at $grid_key" . Dumper($tile));
+                        if ( $tile->{shape} =~ /T[LR]/
+
+                            # color match for triangles; see above
+                            && (! $color_match || scalar grep { $tile->{brush_index} == $side_brush_index{$_} } map qw(L T R))
+
+                        )
+                        {
                             $grid_key = join('_', @{ $tile }{qw( facing left top right )});
                             $log->debug("triangle key $grid_key found $tile->{shape}");
                             $marked_hash->{$grid_key} = 1;
@@ -2817,11 +2888,12 @@ sub export_scene { #{{{1
 
     my $export_option = $self->scene->export_options;
 
-    # find bitmap size
+    # find bitmap size; the 0.86 is because the x coords track the vertical lines
+    # which are not a full side length apart, but side * cos 30 (ie 0.86)
     my ($width, $height); 
     if ($export_option->{pixels_per_tile_rbn}) {
         my $pixels_per_tile = $export_option->{pixels_per_tile_sld};
-        ($width, $height) = (($max_x_grid - $min_x_grid) * $pixels_per_tile, ($max_y_grid - $min_y_grid) * $pixels_per_tile);
+        ($width, $height) = (($max_x_grid - $min_x_grid) * $pixels_per_tile * 0.86, ($max_y_grid - $min_y_grid) * $pixels_per_tile);
     }
     else {
 
@@ -2919,7 +2991,7 @@ sub export_scene { #{{{1
 
     $log->debug("export done");
     $self->SetCursor(wxCROSS_CURSOR);
-
+#
     return;
 }
 
